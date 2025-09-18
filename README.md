@@ -1,4 +1,6 @@
-# AddressDataEntropy
+# AddressEntropy
+
+![Banner](https://github.com/ATrnd/address-entropy/blob/main/img/address-entropy-banner.jpg?raw=true)
 
 ![Solidity](https://img.shields.io/badge/Solidity-0.8.28-363636?style=flat&logo=solidity)
 ![Foundry](https://img.shields.io/badge/Foundry-Latest-000000?style=flat)
