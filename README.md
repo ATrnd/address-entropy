@@ -7,6 +7,25 @@
 
 **[⚡] Address-based entropy engine // 160→40bit segmentation // Crash-immune design**
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Engine Mechanics](#engine-mechanics)
+  - [Address Segmentation](#address-segmentation)
+  - [Cycling System](#cycling-system)
+  - [Entropy Combination](#entropy-combination)
+  - [Fallback Chain](#fallback-chain)
+- [Protection Mechanics](#protection-mechanics)
+  - [Invalid Data Handling](#invalid-data-handling)
+  - [Fallback Architecture](#fallback-architecture)
+- [Core Architecture](#core-architecture)
+- [Function Reference](#function-reference)
+  - [Public Functions](#public-functions)
+  - [Internal Functions](#internal-functions)
+  - [Library Functions](#library-functions)
+- [Deployments](#deployments)
+- [Quick Start](#quick-start)
+
 ## Overview
 
 Generates entropy by extracting 40-bit segments from addresses and combining with block data, transaction context, and cycling state.
@@ -56,7 +75,7 @@ keccak256(
 | **msg.sender == 0** | Edge case check | Skip state update, log error | Component ID 3, Error 1 |
 | **Extraction Failure** | Try-catch on segment ops | Emergency entropy path | Component ID varies |
 
-### Never-Fail Guarantee
+### Fallback Architecture
 ```
 getEntropy() → ALWAYS returns bytes32
     │
@@ -68,13 +87,7 @@ getEntropy() → ALWAYS returns bytes32
                   msg.sender + salt + error_counts
 ```
 
-### Error Monitoring
-- **Component tracking**: 5 components × 6 error types = 30 counters
-- **Event emission**: `SafetyFallbackTriggered` with component/function/error
-- **State persistence**: Error counts stored in `mapping(uint8 => mapping(uint8 => uint256))`
-- **Health queries**: View functions expose all error statistics
-
-## Architecture
+## Core Architecture
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
@@ -89,28 +102,71 @@ getEntropy() → ALWAYS returns bytes32
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-## Core Functions
+## Function Reference
 
-### Entropy Generation
-- `getEntropy(uint256 salt)` - Generate entropy with salt
+### Public Functions
 
-### State Monitoring
-- `getComponentErrorCount(uint8 componentId, uint8 errorCode)` - Error count by component/type
-- `getComponentTotalErrorCount(uint8 componentId)` - Total errors for component
-- `hasComponentErrors(uint8 componentId)` - Check if component has errors
+#### Core Entropy Generation
+- `getEntropy(uint256 salt) external returns (bytes32)` - Primary entropy generation function with user-provided salt
 
-### Component-Specific Error Queries
-- `getAddressExtractionZeroAddressCount()` - Zero address errors
-- `getSegmentExtractionZeroSegmentCount()` - Zero segment errors
-- `getSegmentExtractionOutOfBoundsCount()` - Index out of bounds errors
-- `getEntropyGenerationZeroAddressCount()` - Zero address in generation
-- `getEntropyGenerationZeroSegmentCount()` - Zero segment in generation
-- `getEntropyGenerationCycleDisruptionCount()` - Cycle disruption errors
+#### Error Monitoring & Health Checks
+- `getComponentErrorCount(uint8 componentId, uint8 errorCode) external view returns (uint256)` - Get specific error count for component/error pair
+- `getComponentTotalErrorCount(uint8 componentId) external view returns (uint256)` - Get total error count for a component
+- `hasComponentErrors(uint8 componentId) external view returns (bool)` - Check if component has any errors
 
-### Ownership
-- `owner()` - Get contract owner
-- `transferOwnership(address newOwner)` - Transfer ownership
-- `renounceOwnership()` - Renounce ownership
+#### Component-Specific Error Queries
+- `getAddressExtractionZeroAddressCount() external view returns (uint256)` - Zero address errors in address extraction
+- `getSegmentExtractionZeroSegmentCount() external view returns (uint256)` - Zero segment errors in segment extraction
+- `getSegmentExtractionOutOfBoundsCount() external view returns (uint256)` - Out of bounds errors in segment extraction
+- `getEntropyGenerationZeroAddressCount() external view returns (uint256)` - Zero address errors in entropy generation
+- `getEntropyGenerationZeroSegmentCount() external view returns (uint256)` - Zero segment errors in entropy generation
+- `getEntropyGenerationCycleDisruptionCount() external view returns (uint256)` - Cycle disruption errors in entropy generation
+
+#### Ownership (Inherited from OpenZeppelin)
+- `owner() external view returns (address)` - Get current contract owner
+- `transferOwnership(address newOwner) external` - Transfer ownership to new address
+- `renounceOwnership() external` - Renounce ownership (sets owner to zero address)
+
+### Internal Functions
+
+#### Core Processing
+- `_extractAddressSegment(address addr, uint256 segmentIndex) internal returns (bytes5)` - Extract specific 40-bit segment from address
+- `_updateEntropyState() internal` - Update cycling indices and address array after entropy generation
+- `_tryUpdateAddress(address newAddress) internal returns (bool)` - Attempt to add new address to entropy pool
+- `_incrementTransactionCounter() internal returns (uint256)` - Increment and return transaction counter
+
+#### Fallback & Error Handling
+- `_handleFallback(uint8 componentId, string memory functionName, uint8 errorCode) internal` - Handle fallback events with tracking
+- `_incrementComponentErrorCount(uint8 componentId, uint8 errorCode) internal returns (uint256)` - Increment error counters
+- `_generateEmergencyEntropy(uint256 salt, uint256 txCounter) internal view returns (bytes32)` - Generate emergency entropy when normal flow fails
+- `_getComponentName(uint8 componentId) internal pure returns (string memory)` - Convert component ID to name string
+
+### Library Functions
+
+#### AddressSegmentLibrary
+- `extractSegmentWithShift(address addr, uint256 segmentIndex) internal pure returns (uint40)` - Core bit-shifting segment extraction
+- `generateFallbackSegment(uint256 segmentIndex) internal view returns (bytes5)` - Generate deterministic fallback segment
+- `generateFallbackSegments() internal view returns (bytes5[4] memory)` - Generate all fallback segments for zero address
+- `isSegmentIndexValid(uint256 segmentIndex) internal pure returns (bool)` - Validate segment index (0-3)
+- `isZeroSegment(uint40 segment) internal pure returns (bool)` - Check if extracted segment is zero
+- `isZeroByteArray(bytes5 value) internal pure returns (bool)` - Check if bytes5 value is zero
+
+#### AddressCyclingLibrary
+- `cycleAddressIndex(uint256 currentIndex) internal pure returns (uint256)` - Cycle through address array indices
+- `cycleSegmentIndex(uint256 currentIndex) internal pure returns (uint256)` - Cycle through segment indices
+- `cycleUpdatePosition(uint256 currentPosition) internal pure returns (uint256)` - Cycle through update positions
+- `incrementTransactionCounter(uint256 currentCounter) internal pure returns (uint256)` - Increment transaction counter
+
+#### AddressValidationLibrary
+- `isZeroAddress(address addr) internal pure returns (bool)` - Check if address is zero
+- `isZeroValue(uint256 value) internal pure returns (bool)` - Check if uint256 value is zero
+- `isMsgSenderZero() internal view returns (bool)` - Check if msg.sender is zero address
+- `shouldHandleExtractionError(bool success) internal pure returns (bool)` - Determine if extraction error needs handling
+
+#### AddressFallbackLibrary
+- `getComponentName(uint8 componentId) internal pure returns (string memory)` - Get component name from ID
+- `incrementComponentErrorCount(uint256 currentCount) internal pure returns (uint256)` - Safely increment error count
+- `generateEmergencyEntropy(uint256 salt, uint256 txCounter, uint256 zeroAddressCount, uint256 zeroSegmentCount) internal view returns (bytes32)` - Generate emergency entropy with error counts
 
 ## Deployments
 
@@ -119,13 +175,34 @@ getEntropy() → ALWAYS returns bytes32
 | Sepolia | `0x0a6a8bd517423412b2c5ce059308bdb47c19b138` | [View](https://sepolia.etherscan.io/address/0x0a6a8bd517423412b2c5ce059308bdb47c19b138) |
 | Shape Mainnet | `0x7E219429Af91E3a455Ed70A24C09FCbCa8C65F86` | [View](https://shapescan.xyz/address/0x7E219429Af91E3a455Ed70A24C09FCbCa8C65F86) |
 
-## Usage
+## Quick Start
 
-```solidity
-// Generate entropy
-bytes32 entropy = contract.getEntropy(12345);
+### Prerequisites
 
-// Check system health
-bool hasErrors = contract.hasComponentErrors(1);
-uint256 errorCount = contract.getComponentTotalErrorCount(1);
+- [Foundry](https://getfoundry.sh/) installed
+- [Git](https://git-scm.com/) installed
+- Solidity 0.8.28+
+- Basic understanding of Ethereum smart contracts
+
+### Installation
+
+#### Clone the Repository
+```bash
+git clone https://github.com/ATrnd/address-entropy.git
+cd address-entropy
+```
+
+#### Install Dependencies
+```bash
+forge install
+```
+
+#### Build the Project
+```bash
+forge build
+```
+
+#### Run Tests
+```bash
+forge test
 ```
