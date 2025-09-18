@@ -182,7 +182,6 @@ getEntropy() → ALWAYS returns bytes32
 - [Foundry](https://getfoundry.sh/) installed
 - [Git](https://git-scm.com/) installed
 - Solidity 0.8.28+
-- Basic understanding of Ethereum smart contracts
 
 ### Installation
 
