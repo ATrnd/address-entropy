@@ -12,8 +12,9 @@ import {AddressFallbackLibrary} from "../libraries/AddressFallbackLibrary.sol";
 
 /**
  * @title AbstractAddressEntropy
- * @notice Abstract base implementation for address-based entropy generation
- * @dev Provides common functionality and template methods for address entropy systems
+ * @notice Abstract base implementation for address-based entropy generation with triple-cycling
+ * @dev Template implementation with 160→40bit address segmentation and cycling state management
+ *      Complements BlockDataEntropy for identity-based vs temporal-based entropy requirements
  * @author ATrnd
  */
 abstract contract AbstractAddressEntropy is
@@ -41,28 +42,28 @@ abstract contract AbstractAddressEntropy is
     uint256 private constant ADDRESS_ARRAY_SIZE = 3;
     uint256 private constant SEGMENTS_PER_ADDRESS = 4;
 
-    /// @notice Array of addresses contributing to entropy
-    /// @dev Smaller array with segmented extraction for more entropy
+    /// @notice Address pool for entropy generation with 160→40bit segmentation
+    /// @dev Fixed-size array enabling 4×40-bit extractions per address, updated via cycling replacement
     address[ADDRESS_ARRAY_SIZE] internal s_entropyAddresses;
 
-    /// @notice Current address index for entropy extraction
-    /// @dev Cycles through 0 to ADDRESS_ARRAY_SIZE - 1
+    /// @notice Current position in address pool for segment extraction
+    /// @dev Cycles 0→1→2→0 with each entropy request, determines active address for segmentation
     uint256 internal s_currentAddressIndex;
 
-    /// @notice Current segment index for address entropy extraction
-    /// @dev Cycles through 0 to SEGMENTS_PER_ADDRESS - 1
+    /// @notice Current 40-bit segment position within address
+    /// @dev Cycles 0→1→2→3→0 for bit shifts: 0, 40, 80, 120 bits with each entropy request
     uint256 internal s_currentSegmentIndex;
 
-    /// @notice Position to update next in the address array
-    /// @dev Cycles through 0 to ADDRESS_ARRAY_SIZE - 1
+    /// @notice Next address pool slot for replacement during updates
+    /// @dev Cycles 0→1→2→0 independently
     uint256 internal s_nextUpdatePosition;
 
-    /// @notice Transaction counter for additional entropy
-    /// @dev Increments with each entropy request
+    /// @notice Monotonic counter for entropy request uniqueness
+    /// @dev Increments once per getEntropy() call
     uint256 internal s_transactionCounter;
 
-    /// @notice Component-specific fallback tracking
-    /// @dev Maps component ID => error code => count
+    /// @notice Granular error tracking for fallback monitoring and debugging
+    /// @dev Nested mapping: componentId(1-3) → errorCode(1-6) → count
     mapping(uint8 => mapping(uint8 => uint256)) internal s_componentErrorCounts;
 
     /*//////////////////////////////////////////////////////////////
@@ -75,10 +76,10 @@ abstract contract AbstractAddressEntropy is
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Initializes the Address Data Entropy contract
-    /// @dev Sets up initial state with owner and seed addresses
-    /// @param _initialOwner Address that will own and control the contract
-    /// @param _seedAddresses Array of addresses to seed the entropy
+    /// @notice Initializes abstract address entropy with validated seed addresses and cycling state
+    /// @dev Validates non-zero seed addresses, initializes entropy pool and cycling indices to zero
+    /// @param _initialOwner Contract owner for OpenZeppelin Ownable inheritance
+    /// @param _seedAddresses 3-element array of validated non-zero addresses for entropy generation
     constructor(
         address _initialOwner,
         address[ADDRESS_ARRAY_SIZE] memory _seedAddresses
@@ -106,15 +107,14 @@ abstract contract AbstractAddressEntropy is
                         EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Generates entropy based on address data
-    /// @dev Updates segment indices, includes transaction counter for additional entropy
-    /// @param salt Additional entropy source for randomness
-    /// @return Entropy derived from the current address segment
+    /// @notice Generates entropy from current address data with salt
+    /// @dev Triple-cycling state management: advances address index, segment index, and update position
+    /// @param salt Additional entropy source for randomness enhancement
+    /// @return 32-byte entropy value derived from 40-bit address segment with block and transaction context
     function getEntropy(uint256 salt) external virtual override returns (bytes32) {
         // Always increment transaction counter exactly once per call
         uint256 currentTx = _incrementTransactionCounter();
 
-        // Get the current address
         address currentAddress = s_entropyAddresses[s_currentAddressIndex];
 
         // Check for zero address (should never happen with proper initialization)
@@ -344,7 +344,6 @@ abstract contract AbstractAddressEntropy is
             return false;
         }
 
-        // Check if address is already in the array
         for (uint256 i = 0; i < ADDRESS_ARRAY_SIZE; i++) {
             if (s_entropyAddresses[i] == newAddress) {
                 return false; // Address already present, no update needed

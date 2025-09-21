@@ -189,7 +189,7 @@ getEntropy() → ALWAYS returns bytes32
 
 #### Clone the Repository
 ```bash
-git clone https://github.com/ATrnd/address-entropy.git
+git clone git@github.com:ATrnd/address-entropy.git
 cd address-entropy
 ```
 

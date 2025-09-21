@@ -6,7 +6,7 @@ import {AddressEntropyConstants} from "../constants/AddressEntropyConstants.sol"
 /**
  * @title AddressSegmentLibrary
  * @notice Pure utility functions for address segment extraction and manipulation
- * @dev Contains the core bit manipulation logic extracted from AddressDataEntropy
+ * @dev Bit manipulation library for 160→40bit address segmentation
  * @author ATrnd
  */
 library AddressSegmentLibrary {
@@ -18,11 +18,11 @@ library AddressSegmentLibrary {
                          SEGMENT EXTRACTION
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Extracts a segment with the appropriate bit shift
-    /// @dev Core bit manipulation logic for segment extraction
-    /// @param addr The address to extract from
-    /// @param segmentIndex Which segment to extract (0-3)
-    /// @return The extracted 40-bit segment
+    /// @notice Extracts 40-bit segment from address using conditional bit shifts
+    /// @dev Uses right-shift operations with 0xFFFFFFFFFF mask for O(1) extraction
+    /// @param addr Ethereum address for 160→40bit segmentation
+    /// @param segmentIndex Segment position (0-3, maps to shifts: 0, 40, 80, 120 bits)
+    /// @return 40-bit segment as uint40 from specified address position
     function extractSegmentWithShift(address addr, uint256 segmentIndex) internal pure returns (uint40) {
         uint160 addressValue = uint160(addr);
 

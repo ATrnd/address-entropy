@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 /**
  * @title IAddressEntropy
  * @notice Interface for address-based entropy generation with segmented extraction
- * @dev Defines the contract for generating entropy from Ethereum addresses using segment-based extraction
+ * @dev Defines entropy generation and fallback monitoring for 160→40bit address segmentation
  * @author ATrnd
  */
 interface IAddressEntropy {
@@ -61,10 +61,10 @@ interface IAddressEntropy {
                         ENTROPY GENERATION
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Generates entropy based on address data with segmented extraction
-    /// @dev Updates segment indices, includes transaction counter for additional entropy
-    /// @param salt Additional entropy source for randomness
-    /// @return Entropy derived from the current address segment
+    /// @notice Generates entropy from current address data with salt
+    /// @dev Triple-cycling state management: advances address index, segment index, and update position
+    /// @param salt Additional entropy source for randomness enhancement
+    /// @return 32-byte entropy value derived from 40-bit address segment with block and transaction context
     function getEntropy(uint256 salt) external returns (bytes32);
 
     /*//////////////////////////////////////////////////////////////

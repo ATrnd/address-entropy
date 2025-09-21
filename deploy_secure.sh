@@ -178,13 +178,6 @@ if [ $DEPLOYMENT_STATUS -eq 0 ]; then
     echo "3. Document deployment in your project"
     echo "4. Monitor contract performance"
 
-    if [ "$NETWORK" = "shape" ]; then
-        echo ""
-        echo -e "${BLUE}💰 Shape Mainnet Benefits:${NC}"
-        echo "- You'll earn 80% of gas fees from contract usage"
-        echo "- Monitor creator rewards on Shape dashboard"
-        echo "- Consider building more contracts for additional revenue"
-    fi
 
 else
     echo -e "${RED}❌ Deployment failed!${NC}"

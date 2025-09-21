@@ -13,28 +13,31 @@ library AddressEntropyConstants {
                             ARRAY & SEGMENT CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Number of addresses stored for entropy
-    /// @dev Using a smaller set with segmented extraction
+    /// @notice Maximum address pool size for entropy generation
+    /// @dev Optimized balance: 3 addresses × 4 segments = 12 unique entropy sources, minimizes storage costs
     uint256 internal constant ADDRESS_ARRAY_SIZE = 3;
 
-    /// @notice Number of segments per address
-    /// @dev Each address is divided into this many segments for entropy
+    /// @notice Address segmentation count for 160→40bit extraction
+    /// @dev 160-bit address ÷ 4 segments = 40 bits each, maximizes entropy density per address
     uint256 internal constant SEGMENTS_PER_ADDRESS = 4;
 
-    /// @notice Constant for incrementing indices
+    /// @notice Index cycling increment for deterministic state progression
+    /// @dev Single-step advancement
     uint256 internal constant INDEX_INCREMENT = 1;
 
     /*//////////////////////////////////////////////////////////////
                             ZERO VALUE CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Zero address constant for readability
+    /// @notice Zero address constant for validation and initialization
+    /// @dev Used throughout protocol for zero checks
     address internal constant ZERO_ADDRESS = address(0);
 
-    /// @notice Zero uint constant for readability
+    /// @notice Zero uint constant for validation and initialization
+    /// @dev Standard zero value for counter resets and bounds checking
     uint256 internal constant ZERO_UINT = 0;
 
-    /// @notice Zero byte8 constant for readability
+    /// @notice Zero segment constant
     uint40 internal constant ZERO_SEGMENT = 0;
 
     /// @notice No error code constant
@@ -44,10 +47,12 @@ library AddressEntropyConstants {
                             BITMASK & SHIFT CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Bitmask for extracting 5 bytes (40 bits)
+    /// @notice Bitmask for 40-bit segment isolation after right-shift
+    /// @dev 0xFFFFFFFFFF masks lower 40 bits
     uint160 internal constant SEGMENT_BITMASK = 0xFFFFFFFFFF;
 
-    /// @notice Bit shift values for segments
+    /// @notice Bit shift positions for 160→40bit address segmentation
+    /// @dev Shifts enable extraction: bits 0-39, 40-79, 80-119, 120-159 from address
     uint8 internal constant SEGMENT_SHIFT_0 = 0;
     uint8 internal constant SEGMENT_SHIFT_1 = 40;
     uint8 internal constant SEGMENT_SHIFT_2 = 80;
