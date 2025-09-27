@@ -43,11 +43,16 @@ jobs:
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: ⚙️ Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: v1.1.0
+
+      - name: 🔧 Install dependencies
+        run: forge install
 
       - name: 📚 Generate documentation
         run: |
