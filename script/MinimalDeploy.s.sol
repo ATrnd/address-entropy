@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Script, console} from "forge-std/Script.sol";
-import {AddressDataEntropy} from "../src/implementations/AddressDataEntropy.sol";
+import { Script, console } from "forge-std/Script.sol";
+import { AddressDataEntropy } from "../src/implementations/AddressDataEntropy.sol";
 
 contract MinimalDeploy is Script {
     bytes32 private constant DEFAULT_SALT = keccak256("AddressDataEntropy");
+
     function run() external {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerKey);
@@ -19,10 +20,7 @@ contract MinimalDeploy is Script {
         console.log("[INFO] Network:", block.chainid);
 
         vm.startBroadcast(deployerKey);
-        AddressDataEntropy deployed = new AddressDataEntropy{salt: salt}(
-            owner,
-            entropyAddresses
-        );
+        AddressDataEntropy deployed = new AddressDataEntropy{ salt: salt }(owner, entropyAddresses);
         vm.stopBroadcast();
         require(deployed.owner() == owner, "Deployment verification failed");
         console.log("[SUCCESS] AddressDataEntropy deployed to:", address(deployed));
@@ -52,14 +50,10 @@ contract MinimalDeploy is Script {
 
         if (block.chainid == 1) {
             return [address(0x1), address(0x2), address(0x3)];
-        } else if (block.chainid == 11155111) {
+        } else if (block.chainid == 11_155_111) {
             return [address(0x1), address(0x2), address(0x3)];
         } else {
-            return [
-                deployer,
-                address(uint160(deployer) + 1),
-                address(uint160(deployer) + 2)
-            ];
+            return [deployer, address(uint160(deployer) + 1), address(uint160(deployer) + 2)];
         }
     }
 }

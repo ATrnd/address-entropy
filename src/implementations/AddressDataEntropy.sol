@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {AbstractAddressEntropy} from "../abstracts/AbstractAddressEntropy.sol";
+import { AbstractAddressEntropy } from "../abstracts/AbstractAddressEntropy.sol";
 
 /**
  * @title AddressDataEntropy
@@ -11,8 +11,6 @@ import {AbstractAddressEntropy} from "../abstracts/AbstractAddressEntropy.sol";
  * @author ATrnd
  */
 contract AddressDataEntropy is AbstractAddressEntropy {
-
-
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -24,8 +22,9 @@ contract AddressDataEntropy is AbstractAddressEntropy {
     constructor(
         address _initialOwner,
         address[3] memory _seedAddresses
-    ) AbstractAddressEntropy(_initialOwner, _seedAddresses) {}
+    )
+        AbstractAddressEntropy(_initialOwner, _seedAddresses)
+    { }
     // Constructor logic is handled by AbstractAddressEntropy
     // All functionality is inherited from the abstract base
-
 }

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test, console, Vm} from "forge-std/Test.sol";
-import {AddressDataEntropy} from "../src/implementations/AddressDataEntropy.sol";
-import {AddressDataEntropyTestProxy} from "./mock/AddressDataEntropyTestProxy.sol";
-import {IAddressEntropy} from "../src/interfaces/IAddressEntropy.sol";
+import { Test, console, Vm } from "forge-std/Test.sol";
+import { AddressDataEntropy } from "../src/implementations/AddressDataEntropy.sol";
+import { AddressDataEntropyTestProxy } from "./mock/AddressDataEntropyTestProxy.sol";
+import { IAddressEntropy } from "../src/interfaces/IAddressEntropy.sol";
 
 /**
  * @title Address Data Entropy Base Test
@@ -114,7 +114,7 @@ contract AddressDataEntropyBaseTest is Test {
         assertEq(addressEntropy.getTransactionCounter(), 1, "Transaction counter should increment");
 
         // Get current indices after call
-        (uint256 addressIndex, uint256 segmentIndex, ) = addressEntropy.getCurrentIndices();
+        (uint256 addressIndex, uint256 segmentIndex,) = addressEntropy.getCurrentIndices();
         assertEq(addressIndex, 1, "Address index should increment");
         assertEq(segmentIndex, 1, "Segment index should increment");
     }
@@ -136,7 +136,7 @@ contract AddressDataEntropyBaseTest is Test {
         assertEq(addressEntropy.getTransactionCounter(), 2, "Transaction counter should increment twice");
 
         // Get current indices after calls
-        (uint256 addressIndex, uint256 segmentIndex, ) = addressEntropy.getCurrentIndices();
+        (uint256 addressIndex, uint256 segmentIndex,) = addressEntropy.getCurrentIndices();
         assertEq(addressIndex, 2, "Address index should increment twice");
         assertEq(segmentIndex, 2, "Segment index should increment twice");
 
@@ -219,7 +219,7 @@ contract AddressDataEntropyBaseTest is Test {
 
     function test_AddressIndexCycling() public {
         // Get initial indices
-        (uint256 initialAddrIndex, , ) = addressEntropy.getCurrentIndices();
+        (uint256 initialAddrIndex,,) = addressEntropy.getCurrentIndices();
 
         // Call getEntropy multiple times to cycle through address indices
         for (uint256 i = 0; i < 5; i++) {
@@ -227,14 +227,14 @@ contract AddressDataEntropyBaseTest is Test {
             addressEntropy.getEntropy(i, user);
 
             // Check address index cycling
-            (uint256 addrIndex, , ) = addressEntropy.getCurrentIndices();
+            (uint256 addrIndex,,) = addressEntropy.getCurrentIndices();
             assertEq(addrIndex, (initialAddrIndex + i + 1) % 3, "Address index should cycle correctly");
         }
     }
 
     function test_SegmentIndexCycling() public {
         // Get initial indices
-        ( , uint256 initialSegIndex, ) = addressEntropy.getCurrentIndices();
+        (, uint256 initialSegIndex,) = addressEntropy.getCurrentIndices();
 
         // Call getEntropy multiple times to cycle through segment indices
         for (uint256 i = 0; i < 5; i++) {
@@ -242,21 +242,21 @@ contract AddressDataEntropyBaseTest is Test {
             addressEntropy.getEntropy(i, user);
 
             // Check segment index cycling
-            (, uint256 segIndex, ) = addressEntropy.getCurrentIndices();
+            (, uint256 segIndex,) = addressEntropy.getCurrentIndices();
             assertEq(segIndex, (initialSegIndex + i + 1) % 4, "Segment index should cycle correctly");
         }
     }
 
     function test_UpdatePositionWithNewAddress() public {
         // Get initial indices
-        (, , uint256 initialUpdatePos) = addressEntropy.getCurrentIndices();
+        (,, uint256 initialUpdatePos) = addressEntropy.getCurrentIndices();
 
         // Call with orchestrator - should update the address array
         vm.prank(user);
         addressEntropy.getEntropy(123, user);
 
         // Get new indices
-        (, , uint256 newUpdatePos) = addressEntropy.getCurrentIndices();
+        (,, uint256 newUpdatePos) = addressEntropy.getCurrentIndices();
 
         // Update position should advance by 1 when an address is added
         uint256 expectedUpdatePos = (initialUpdatePos + 1) % 3; // 3 is ADDRESS_ARRAY_SIZE
@@ -269,14 +269,14 @@ contract AddressDataEntropyBaseTest is Test {
         addressEntropy.getEntropy(123, user);
 
         // Get indices after first call
-        (, , uint256 initialUpdatePos) = addressEntropy.getCurrentIndices();
+        (,, uint256 initialUpdatePos) = addressEntropy.getCurrentIndices();
 
         // Call again with the same user
         vm.prank(user);
         addressEntropy.getEntropy(456, user);
 
         // Get indices after second call
-        (, , uint256 newUpdatePos) = addressEntropy.getCurrentIndices();
+        (,, uint256 newUpdatePos) = addressEntropy.getCurrentIndices();
 
         // Update position should remain the same since the address was already in the array
         assertEq(newUpdatePos, initialUpdatePos, "Update position should not change when using existing address");
@@ -353,9 +353,7 @@ contract AddressDataEntropyBaseTest is Test {
 
         // Check counter incremented by 1
         assertEq(
-            addressEntropy.getTransactionCounter(),
-            initialCounter + 1,
-            "Transaction counter should increment by 1"
+            addressEntropy.getTransactionCounter(), initialCounter + 1, "Transaction counter should increment by 1"
         );
 
         // Call getEntropy again
@@ -415,11 +413,9 @@ contract AddressDataEntropyBaseTest is Test {
 
         // Check for EntropyGenerated event
         bool foundEvent = false;
-        bytes32 expectedEventSignature = keccak256(
-            "EntropyGenerated(address,address,uint256,uint256)"
-        );
+        bytes32 expectedEventSignature = keccak256("EntropyGenerated(address,address,uint256,uint256)");
 
-        for (uint i = 0; i < entries.length; i++) {
+        for (uint256 i = 0; i < entries.length; i++) {
             if (entries[i].topics[0] == expectedEventSignature) {
                 // Check indexed parameters
                 address eventRequester = address(uint160(uint256(entries[i].topics[1])));
@@ -453,11 +449,9 @@ contract AddressDataEntropyBaseTest is Test {
 
         // Check for EntropyAddressUpdated event
         bool foundEvent = false;
-        bytes32 expectedEventSignature = keccak256(
-            "EntropyAddressUpdated(uint256,address,address)"
-        );
+        bytes32 expectedEventSignature = keccak256("EntropyAddressUpdated(uint256,address,address)");
 
-        for (uint i = 0; i < entries.length; i++) {
+        for (uint256 i = 0; i < entries.length; i++) {
             if (entries[i].topics[0] == expectedEventSignature) {
                 // Check indexed parameters
                 uint256 position = uint256(entries[i].topics[1]);
@@ -495,18 +489,30 @@ contract AddressDataEntropyBaseTest is Test {
         // Check component total counts
         for (uint8 componentId = 1; componentId <= 3; componentId++) {
             assertEq(
-                addressEntropy.getComponentTotalErrorCount(componentId),
-                0,
-                "Initial total error count should be zero"
+                addressEntropy.getComponentTotalErrorCount(componentId), 0, "Initial total error count should be zero"
             );
         }
 
         // Check individual error count functions
-        assertEq(addressEntropy.getAddressExtractionZeroAddressCount(), 0, "Should have no zero address errors initially");
-        assertEq(addressEntropy.getSegmentExtractionZeroSegmentCount(), 0, "Should have no zero segment errors initially");
-        assertEq(addressEntropy.getSegmentExtractionOutOfBoundsCount(), 0, "Should have no out of bounds errors initially");
-        assertEq(addressEntropy.getEntropyGenerationCycleDisruptionCount(), 0, "Should have no cycle disruption errors initially");
-        assertEq(addressEntropy.getEntropyGenerationZeroSegmentCount(), 0, "Should have no entropy zero segment errors initially");
+        assertEq(
+            addressEntropy.getAddressExtractionZeroAddressCount(), 0, "Should have no zero address errors initially"
+        );
+        assertEq(
+            addressEntropy.getSegmentExtractionZeroSegmentCount(), 0, "Should have no zero segment errors initially"
+        );
+        assertEq(
+            addressEntropy.getSegmentExtractionOutOfBoundsCount(), 0, "Should have no out of bounds errors initially"
+        );
+        assertEq(
+            addressEntropy.getEntropyGenerationCycleDisruptionCount(),
+            0,
+            "Should have no cycle disruption errors initially"
+        );
+        assertEq(
+            addressEntropy.getEntropyGenerationZeroSegmentCount(),
+            0,
+            "Should have no entropy zero segment errors initially"
+        );
     }
 
     function test_SpecificErrorCounterGetters() public view {
@@ -575,8 +581,10 @@ contract AddressDataEntropyBaseTest is Test {
         assertEq(segments[3], expectedSegment3, "Segment 3 should match expected value");
 
         // Additional test to ensure segments are unique (for most addresses)
-        assertTrue(segments[0] != segments[1] || segments[1] != segments[2] || segments[2] != segments[3],
-            "At least some segments should be different from each other");
+        assertTrue(
+            segments[0] != segments[1] || segments[1] != segments[2] || segments[2] != segments[3],
+            "At least some segments should be different from each other"
+        );
     }
 
     function test_GetAddressSegmentsForZeroAddress() public view {

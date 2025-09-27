@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {AddressEntropyConstants} from "../constants/AddressEntropyConstants.sol";
+import { AddressEntropyConstants } from "../constants/AddressEntropyConstants.sol";
 
 /**
  * @title AddressValidationLibrary
@@ -10,7 +10,6 @@ import {AddressEntropyConstants} from "../constants/AddressEntropyConstants.sol"
  * @author ATrnd
  */
 library AddressValidationLibrary {
-
     /*//////////////////////////////////////////////////////////////
                          ADDRESS VALIDATION
     //////////////////////////////////////////////////////////////*/
@@ -42,5 +41,4 @@ library AddressValidationLibrary {
     function isMsgSenderZero() internal view returns (bool) {
         return msg.sender == AddressEntropyConstants.ZERO_ADDRESS;
     }
-
 }

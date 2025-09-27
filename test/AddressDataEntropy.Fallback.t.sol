@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test, console, Vm} from "forge-std/Test.sol";
-import {AddressDataEntropy} from "../src/implementations/AddressDataEntropy.sol";
-import {AddressDataEntropyTestProxy} from "./mock/AddressDataEntropyTestProxy.sol";
+import { Test, console, Vm } from "forge-std/Test.sol";
+import { AddressDataEntropy } from "../src/implementations/AddressDataEntropy.sol";
+import { AddressDataEntropyTestProxy } from "./mock/AddressDataEntropyTestProxy.sol";
 
 /**
  * @title Address Data Entropy Fallback Test
@@ -96,12 +96,7 @@ contract AddressDataEntropyFallbackTest is Test {
 
         // Verify event emission
         Vm.Log[] memory entries = vm.getRecordedLogs();
-        verifyFallbackEvent(
-            entries,
-            COMPONENT_ENTROPY_GENERATION,
-            FUNC_GET_ENTROPY,
-            ERROR_ZERO_ADDRESS
-        );
+        verifyFallbackEvent(entries, COMPONENT_ENTROPY_GENERATION, FUNC_GET_ENTROPY, ERROR_ZERO_ADDRESS);
     }
 
     /// @notice Test zero segment fallback path
@@ -132,12 +127,7 @@ contract AddressDataEntropyFallbackTest is Test {
 
         // Verify event emission
         Vm.Log[] memory entries = vm.getRecordedLogs();
-        verifyFallbackEvent(
-            entries,
-            COMPONENT_SEGMENT_EXTRACTION,
-            FUNC_EXTRACT_ADDRESS_SEGMENT,
-            ERROR_ZERO_SEGMENT
-        );
+        verifyFallbackEvent(entries, COMPONENT_SEGMENT_EXTRACTION, FUNC_EXTRACT_ADDRESS_SEGMENT, ERROR_ZERO_SEGMENT);
     }
 
     /// @notice Test segment index out of bounds handling
@@ -169,10 +159,7 @@ contract AddressDataEntropyFallbackTest is Test {
         // Verify event emission
         Vm.Log[] memory entries = vm.getRecordedLogs();
         verifyFallbackEvent(
-            entries,
-            COMPONENT_SEGMENT_EXTRACTION,
-            FUNC_EXTRACT_ADDRESS_SEGMENT,
-            ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS
+            entries, COMPONENT_SEGMENT_EXTRACTION, FUNC_EXTRACT_ADDRESS_SEGMENT, ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS
         );
     }
 
@@ -193,12 +180,10 @@ contract AddressDataEntropyFallbackTest is Test {
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
         // Count fallback events
-        uint fallbackEventCount = 0;
-        bytes32 expectedEventSignature = keccak256(
-            "SafetyFallbackTriggered(bytes32,bytes32,uint8,string,string)"
-        );
+        uint256 fallbackEventCount = 0;
+        bytes32 expectedEventSignature = keccak256("SafetyFallbackTriggered(bytes32,bytes32,uint8,string,string)");
 
-        for (uint i = 0; i < entries.length; i++) {
+        for (uint256 i = 0; i < entries.length; i++) {
             if (entries[i].topics[0] == expectedEventSignature) {
                 fallbackEventCount++;
             }
@@ -218,7 +203,9 @@ contract AddressDataEntropyFallbackTest is Test {
 
         // Generate custom fallback events with different error codes
         proxy.forceEmitCustomFallback(COMPONENT_ENTROPY_GENERATION, FUNC_GET_ENTROPY, ERROR_ZERO_ADDRESS);
-        proxy.forceEmitCustomFallback(COMPONENT_SEGMENT_EXTRACTION, FUNC_EXTRACT_ADDRESS_SEGMENT, ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS);
+        proxy.forceEmitCustomFallback(
+            COMPONENT_SEGMENT_EXTRACTION, FUNC_EXTRACT_ADDRESS_SEGMENT, ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS
+        );
         proxy.forceEmitCustomFallback(COMPONENT_ADDRESS_EXTRACTION, FUNC_UPDATE_ENTROPY_STATE, ERROR_ZERO_ADDRESS);
 
         // Get logs
@@ -228,11 +215,9 @@ contract AddressDataEntropyFallbackTest is Test {
         bool[6] memory foundErrorCodes; // Index 0 unused, codes are 1-5
 
         // Verify each event
-        bytes32 expectedEventSignature = keccak256(
-            "SafetyFallbackTriggered(bytes32,bytes32,uint8,string,string)"
-        );
+        bytes32 expectedEventSignature = keccak256("SafetyFallbackTriggered(bytes32,bytes32,uint8,string,string)");
 
-        for (uint i = 0; i < entries.length; i++) {
+        for (uint256 i = 0; i < entries.length; i++) {
             if (entries[i].topics[0] == expectedEventSignature) {
                 uint8 errorCode = uint8(uint256(entries[i].topics[3]));
                 if (errorCode > 0 && errorCode <= 5) {
@@ -243,7 +228,10 @@ contract AddressDataEntropyFallbackTest is Test {
 
         // Verify we found the error codes we emitted
         assertTrue(foundErrorCodes[ERROR_ZERO_ADDRESS], "ERROR_ZERO_ADDRESS event should be found");
-        assertTrue(foundErrorCodes[ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS], "ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS event should be found");
+        assertTrue(
+            foundErrorCodes[ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS],
+            "ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS event should be found"
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -271,7 +259,9 @@ contract AddressDataEntropyFallbackTest is Test {
         assertEq(proxy.getAddressExtractionZeroAddressCount(), 1, "Address extraction zero address count should be 1");
         assertEq(proxy.getSegmentExtractionZeroSegmentCount(), 1, "Segment extraction zero segment count should be 1");
         assertEq(proxy.getSegmentExtractionOutOfBoundsCount(), 1, "Segment extraction out of bounds count should be 1");
-        assertEq(proxy.getEntropyGenerationCycleDisruptionCount(), 1, "Entropy generation cycle disruption count should be 1");
+        assertEq(
+            proxy.getEntropyGenerationCycleDisruptionCount(), 1, "Entropy generation cycle disruption count should be 1"
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -296,12 +286,7 @@ contract AddressDataEntropyFallbackTest is Test {
 
         // Verify event emission
         Vm.Log[] memory entries = vm.getRecordedLogs();
-        verifyFallbackEvent(
-            entries,
-            COMPONENT_SEGMENT_EXTRACTION,
-            FUNC_EXTRACT_ADDRESS_SEGMENT,
-            ERROR_ZERO_SEGMENT
-        );
+        verifyFallbackEvent(entries, COMPONENT_SEGMENT_EXTRACTION, FUNC_EXTRACT_ADDRESS_SEGMENT, ERROR_ZERO_SEGMENT);
     }
 
     /// @notice Test cascading fallbacks when multiple error conditions are triggered
@@ -324,12 +309,10 @@ contract AddressDataEntropyFallbackTest is Test {
 
         // Get logs and count fallback events
         Vm.Log[] memory entries = vm.getRecordedLogs();
-        uint fallbackEventCount = 0;
-        bytes32 expectedEventSignature = keccak256(
-            "SafetyFallbackTriggered(bytes32,bytes32,uint8,string,string)"
-        );
+        uint256 fallbackEventCount = 0;
+        bytes32 expectedEventSignature = keccak256("SafetyFallbackTriggered(bytes32,bytes32,uint8,string,string)");
 
-        for (uint i = 0; i < entries.length; i++) {
+        for (uint256 i = 0; i < entries.length; i++) {
             if (entries[i].topics[0] == expectedEventSignature) {
                 fallbackEventCount++;
             }
@@ -345,8 +328,12 @@ contract AddressDataEntropyFallbackTest is Test {
         assertEq(proxy.getAddressExtractionZeroAddressCount(), 0, "Should have no zero address errors initially");
         assertEq(proxy.getSegmentExtractionZeroSegmentCount(), 0, "Should have no zero segment errors initially");
         assertEq(proxy.getSegmentExtractionOutOfBoundsCount(), 0, "Should have no out of bounds errors initially");
-        assertEq(proxy.getEntropyGenerationCycleDisruptionCount(), 0, "Should have no cycle disruption errors initially");
-        assertEq(proxy.getEntropyGenerationZeroSegmentCount(), 0, "Should have no entropy zero segment errors initially");
+        assertEq(
+            proxy.getEntropyGenerationCycleDisruptionCount(), 0, "Should have no cycle disruption errors initially"
+        );
+        assertEq(
+            proxy.getEntropyGenerationZeroSegmentCount(), 0, "Should have no entropy zero segment errors initially"
+        );
 
         // Force some errors
         proxy.forceIncrementComponentErrorCount(COMPONENT_ADDRESS_EXTRACTION, ERROR_ZERO_ADDRESS);
@@ -378,18 +365,19 @@ contract AddressDataEntropyFallbackTest is Test {
         uint8 componentId,
         string memory expectedFunction,
         uint8 expectedErrorCode
-    ) internal view {
+    )
+        internal
+        view
+    {
         bool foundEvent = false;
-        bytes32 expectedEventSignature = keccak256(
-            "SafetyFallbackTriggered(bytes32,bytes32,uint8,string,string)"
-        );
+        bytes32 expectedEventSignature = keccak256("SafetyFallbackTriggered(bytes32,bytes32,uint8,string,string)");
 
         // Get the expected component name based on component ID
         string memory expectedComponentName = proxy.exposedGetComponentName(componentId);
         bytes32 expectedComponentHash = keccak256(bytes(expectedComponentName));
         bytes32 expectedFunctionHash = keccak256(bytes(expectedFunction));
 
-        for (uint i = 0; i < logs.length; i++) {
+        for (uint256 i = 0; i < logs.length; i++) {
             if (logs[i].topics[0] == expectedEventSignature) {
                 // Check if this event matches our expected parameters
                 if (logs[i].topics[3] == bytes32(uint256(expectedErrorCode))) {

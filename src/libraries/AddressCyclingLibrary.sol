@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {AddressEntropyConstants} from "../constants/AddressEntropyConstants.sol";
+import { AddressEntropyConstants } from "../constants/AddressEntropyConstants.sol";
 
 /**
  * @title AddressCyclingLibrary
@@ -10,7 +10,6 @@ import {AddressEntropyConstants} from "../constants/AddressEntropyConstants.sol"
  * @author ATrnd
  */
 library AddressCyclingLibrary {
-
     /*//////////////////////////////////////////////////////////////
                          INDEX CYCLING
     //////////////////////////////////////////////////////////////*/

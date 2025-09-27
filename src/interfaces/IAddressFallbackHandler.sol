@@ -8,7 +8,6 @@ pragma solidity ^0.8.28;
  * @author ATrnd
  */
 interface IAddressFallbackHandler {
-
     /*//////////////////////////////////////////////////////////////
                          ERROR TRACKING
     //////////////////////////////////////////////////////////////*/
@@ -79,5 +78,4 @@ interface IAddressFallbackHandler {
     /// @notice Gets the count of invalid orchestrator address errors in the access control component
     /// @return The error count
     function getAccessControlInvalidOrchestratorAddressCount() external view returns (uint256);
-
 }

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IAddressFallbackHandler} from "../interfaces/IAddressFallbackHandler.sol";
-import {AddressEntropyConstants} from "../constants/AddressEntropyConstants.sol";
-import {AddressFallbackLibrary} from "../libraries/AddressFallbackLibrary.sol";
+import { IAddressFallbackHandler } from "../interfaces/IAddressFallbackHandler.sol";
+import { AddressEntropyConstants } from "../constants/AddressEntropyConstants.sol";
+import { AddressFallbackLibrary } from "../libraries/AddressFallbackLibrary.sol";
 
 /**
  * @title AbstractAddressFallbackHandler
@@ -12,7 +12,6 @@ import {AddressFallbackLibrary} from "../libraries/AddressFallbackLibrary.sol";
  * @author ATrnd
  */
 abstract contract AbstractAddressFallbackHandler is IAddressFallbackHandler {
-
     /*//////////////////////////////////////////////////////////////
                             USING STATEMENTS
     //////////////////////////////////////////////////////////////*/
@@ -49,7 +48,16 @@ abstract contract AbstractAddressFallbackHandler is IAddressFallbackHandler {
     /// @param componentId The component to check
     /// @param errorCode The error code to check
     /// @return The count of this specific error in this component
-    function getComponentErrorCount(uint8 componentId, uint8 errorCode) external view virtual override returns (uint256) {
+    function getComponentErrorCount(
+        uint8 componentId,
+        uint8 errorCode
+    )
+        external
+        view
+        virtual
+        override
+        returns (uint256)
+    {
         return s_componentErrorCounts[componentId][errorCode];
     }
 
@@ -63,61 +71,71 @@ abstract contract AbstractAddressFallbackHandler is IAddressFallbackHandler {
     /// @notice Gets the count of zero address errors in the address extraction component
     /// @return The error count
     function getAddressExtractionZeroAddressCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ADDRESS_EXTRACTION][AddressEntropyConstants.ERROR_ZERO_ADDRESS];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ADDRESS_EXTRACTION][AddressEntropyConstants
+            .ERROR_ZERO_ADDRESS];
     }
 
     /// @notice Gets the count of zero segment errors in the segment extraction component
     /// @return The error count
     function getSegmentExtractionZeroSegmentCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION][AddressEntropyConstants.ERROR_ZERO_SEGMENT];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION][AddressEntropyConstants
+            .ERROR_ZERO_SEGMENT];
     }
 
     /// @notice Gets the count of out of bounds errors in the segment extraction component
     /// @return The error count
     function getSegmentExtractionOutOfBoundsCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION][AddressEntropyConstants.ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION][AddressEntropyConstants
+            .ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS];
     }
 
     /// @notice Gets the count of cycle disruption errors in the entropy generation component
     /// @return The error count
     function getEntropyGenerationCycleDisruptionCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants.ERROR_UPDATE_CYCLE_DISRUPTION];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants
+            .ERROR_UPDATE_CYCLE_DISRUPTION];
     }
 
     /// @notice Gets the count of zero address errors in the entropy generation component
     /// @return The error count
     function getEntropyGenerationZeroAddressCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants.ERROR_ZERO_ADDRESS];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants
+            .ERROR_ZERO_ADDRESS];
     }
 
     /// @notice Gets the count of zero segment errors in entropy generation
     /// @return The error count
     function getEntropyGenerationZeroSegmentCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants.ERROR_ENTROPY_ZERO_SEGMENT];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants
+            .ERROR_ENTROPY_ZERO_SEGMENT];
     }
 
     /// @notice Gets the count of orchestrator not configured errors in the access control component
     /// @return The error count
     function getAccessControlOrchestratorNotConfiguredCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants.ERROR_ORCHESTRATOR_NOT_CONFIGURED];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants
+            .ERROR_ORCHESTRATOR_NOT_CONFIGURED];
     }
 
     /// @notice Gets the count of unauthorized orchestrator errors in the access control component
     /// @return The error count
     function getAccessControlUnauthorizedOrchestratorCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants.ERROR_UNAUTHORIZED_ORCHESTRATOR];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants
+            .ERROR_UNAUTHORIZED_ORCHESTRATOR];
     }
 
     /// @notice Gets the count of orchestrator already configured errors in the access control component
     /// @return The error count
     function getAccessControlOrchestratorAlreadyConfiguredCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants.ERROR_ORCHESTRATOR_ALREADY_CONFIGURED];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants
+            .ERROR_ORCHESTRATOR_ALREADY_CONFIGURED];
     }
 
     /// @notice Gets the count of invalid orchestrator address errors in the access control component
     /// @return The error count
     function getAccessControlInvalidOrchestratorAddressCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants.ERROR_INVALID_ORCHESTRATOR_ADDRESS];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants
+            .ERROR_INVALID_ORCHESTRATOR_ADDRESS];
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -147,11 +165,7 @@ abstract contract AbstractAddressFallbackHandler is IAddressFallbackHandler {
     /// @param componentId The component where the fallback occurred
     /// @param functionName The function where the fallback occurred
     /// @param errorCode The specific error code
-    function _handleFallbackInternal(
-        uint8 componentId,
-        string memory functionName,
-        uint8 errorCode
-    ) internal virtual {
+    function _handleFallbackInternal(uint8 componentId, string memory functionName, uint8 errorCode) internal virtual {
         // Increment the specific error counter for this component
         _incrementComponentErrorCountInternal(componentId, errorCode);
 
@@ -160,11 +174,7 @@ abstract contract AbstractAddressFallbackHandler is IAddressFallbackHandler {
 
         // Emit the event
         emit SafetyFallbackTriggered(
-            keccak256(bytes(componentName)),
-            keccak256(bytes(functionName)),
-            errorCode,
-            componentName,
-            functionName
+            keccak256(bytes(componentName)), keccak256(bytes(functionName)), errorCode, componentName, functionName
         );
     }
 
@@ -173,10 +183,16 @@ abstract contract AbstractAddressFallbackHandler is IAddressFallbackHandler {
     /// @param componentId The component ID where the error occurred
     /// @param errorCode The specific error code
     /// @return The new error count for this component/error combination
-    function _incrementComponentErrorCountInternal(uint8 componentId, uint8 errorCode) internal virtual returns (uint256) {
-        s_componentErrorCounts[componentId][errorCode] = AddressFallbackLibrary.incrementComponentErrorCount(
-            s_componentErrorCounts[componentId][errorCode]
-        );
+    function _incrementComponentErrorCountInternal(
+        uint8 componentId,
+        uint8 errorCode
+    )
+        internal
+        virtual
+        returns (uint256)
+    {
+        s_componentErrorCounts[componentId][errorCode] =
+            AddressFallbackLibrary.incrementComponentErrorCount(s_componentErrorCounts[componentId][errorCode]);
         return s_componentErrorCounts[componentId][errorCode];
     }
 
@@ -198,12 +214,22 @@ abstract contract AbstractAddressFallbackHandler is IAddressFallbackHandler {
     /// @param salt Additional entropy source provided by caller
     /// @param txCounter The current transaction counter
     /// @return Emergency entropy value
-    function _generateEmergencyEntropyInternal(uint256 salt, uint256 txCounter) internal view virtual returns (bytes32) {
+    function _generateEmergencyEntropyInternal(
+        uint256 salt,
+        uint256 txCounter
+    )
+        internal
+        view
+        virtual
+        returns (bytes32)
+    {
         return AddressFallbackLibrary.generateEmergencyEntropy(
             salt,
             txCounter,
-            s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ADDRESS_EXTRACTION][AddressEntropyConstants.ERROR_ZERO_ADDRESS],
-            s_componentErrorCounts[AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION][AddressEntropyConstants.ERROR_ZERO_SEGMENT]
+            s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ADDRESS_EXTRACTION][AddressEntropyConstants
+                .ERROR_ZERO_ADDRESS],
+            s_componentErrorCounts[AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION][AddressEntropyConstants
+                .ERROR_ZERO_SEGMENT]
         );
     }
 
@@ -232,5 +258,4 @@ abstract contract AbstractAddressFallbackHandler is IAddressFallbackHandler {
     function getComponentName(uint8 componentId) internal pure returns (string memory) {
         return AddressFallbackLibrary.getComponentName(componentId);
     }
-
 }

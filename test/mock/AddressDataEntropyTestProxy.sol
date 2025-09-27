@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {AddressDataEntropy} from "../../src/implementations/AddressDataEntropy.sol";
-import {AddressSegmentLibrary} from "../../src/libraries/AddressSegmentLibrary.sol";
+import { AddressDataEntropy } from "../../src/implementations/AddressDataEntropy.sol";
+import { AddressSegmentLibrary } from "../../src/libraries/AddressSegmentLibrary.sol";
 
 /**
  * @title AddressDataEntropyTestProxy
@@ -11,7 +11,6 @@ import {AddressSegmentLibrary} from "../../src/libraries/AddressSegmentLibrary.s
  * @author ATrnd
  */
 contract AddressDataEntropyTestProxy is AddressDataEntropy {
-    
     /*//////////////////////////////////////////////////////////////
                              CONTROL FLAGS
     //////////////////////////////////////////////////////////////*/
@@ -28,7 +27,9 @@ contract AddressDataEntropyTestProxy is AddressDataEntropy {
     constructor(
         address _initialOwner,
         address[3] memory _seedAddresses
-    ) AddressDataEntropy(_initialOwner, _seedAddresses) {
+    )
+        AddressDataEntropy(_initialOwner, _seedAddresses)
+    {
         // Initialize control flags to false
         forceZeroAddress = false;
         forceZeroSegment = false;
@@ -108,11 +109,7 @@ contract AddressDataEntropyTestProxy is AddressDataEntropy {
     /// @param componentId The component ID
     /// @param functionName The function name
     /// @param errorCode The error code
-    function forceEmitCustomFallback(
-        uint8 componentId,
-        string memory functionName,
-        uint8 errorCode
-    ) external {
+    function forceEmitCustomFallback(uint8 componentId, string memory functionName, uint8 errorCode) external {
         _handleFallback(componentId, functionName, errorCode);
     }
 
@@ -131,17 +128,13 @@ contract AddressDataEntropyTestProxy is AddressDataEntropy {
     /// @param addr The address to extract from
     /// @param segmentIndex The segment index
     /// @return The extracted or fallback segment
-    function _extractAddressSegment(address addr, uint256 segmentIndex) 
-        internal 
-        override 
-        returns (bytes5) 
-    {
+    function _extractAddressSegment(address addr, uint256 segmentIndex) internal override returns (bytes5) {
         // Force zero address behavior if enabled
         if (forceZeroAddress) {
             _handleFallback(
                 1, // COMPONENT_ADDRESS_EXTRACTION
                 "extractAddressSegment",
-                1  // ERROR_ZERO_ADDRESS
+                1 // ERROR_ZERO_ADDRESS
             );
             return bytes5(keccak256(abi.encode(block.timestamp, segmentIndex, addr)));
         }
@@ -151,7 +144,7 @@ contract AddressDataEntropyTestProxy is AddressDataEntropy {
             _handleFallback(
                 2, // COMPONENT_SEGMENT_EXTRACTION
                 "extractAddressSegment",
-                3  // ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS
+                3 // ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS
             );
             return bytes5(keccak256(abi.encode(block.timestamp, segmentIndex, addr)));
         }
@@ -164,7 +157,7 @@ contract AddressDataEntropyTestProxy is AddressDataEntropy {
             _handleFallback(
                 2, // COMPONENT_SEGMENT_EXTRACTION
                 "extractAddressSegment",
-                2  // ERROR_ZERO_SEGMENT
+                2 // ERROR_ZERO_SEGMENT
             );
             return bytes5(keccak256(abi.encode(block.timestamp, segmentIndex, addr)));
         }
@@ -187,26 +180,26 @@ contract AddressDataEntropyTestProxy is AddressDataEntropy {
                     TEST-ONLY STATE INSPECTION FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice TEST ONLY - Get current cycling indices 
+    /// @notice TEST ONLY - Get current cycling indices
     /// @dev NEVER expose in production - enables entropy prediction attacks
     /// @return addressIndex Current address index in entropy array (0-2)
-    /// @return segmentIndex Current segment index being extracted (0-3) 
+    /// @return segmentIndex Current segment index being extracted (0-3)
     /// @return updatePosition Next position for address updates (0-2)
-    function getCurrentIndices() external view returns (
-        uint256 addressIndex, 
-        uint256 segmentIndex, 
-        uint256 updatePosition
-    ) {
+    function getCurrentIndices()
+        external
+        view
+        returns (uint256 addressIndex, uint256 segmentIndex, uint256 updatePosition)
+    {
         return (s_currentAddressIndex, s_currentSegmentIndex, s_nextUpdatePosition);
     }
-    
+
     /// @notice TEST ONLY - Get entropy addresses array
     /// @dev NEVER expose in production - enables address pool analysis attacks
     /// @return Array of addresses used for entropy generation
     function getAllEntropyAddresses() external view returns (address[3] memory) {
         return s_entropyAddresses;
     }
-    
+
     /// @notice TEST ONLY - Get transaction counter
     /// @dev NEVER expose in production - enables timing prediction attacks
     /// @return Total number of entropy requests processed
@@ -255,13 +248,10 @@ contract AddressDataEntropyTestProxy is AddressDataEntropy {
     }
 
     /// @notice Public wrapper to call extractAddressSegment for direct testing
-    /// @param addr The address to extract from  
+    /// @param addr The address to extract from
     /// @param segmentIndex The segment index
     /// @return The extracted segment
-    function callExtractAddressSegment(address addr, uint256 segmentIndex) 
-        external 
-        returns (bytes5) 
-    {
+    function callExtractAddressSegment(address addr, uint256 segmentIndex) external returns (bytes5) {
         return _extractAddressSegment(addr, segmentIndex);
     }
 

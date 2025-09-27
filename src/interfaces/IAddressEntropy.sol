@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IAddressFallbackHandler} from "./IAddressFallbackHandler.sol";
+import { IAddressFallbackHandler } from "./IAddressFallbackHandler.sol";
 
 /**
  * @title IAddressEntropy
@@ -10,7 +10,6 @@ import {IAddressFallbackHandler} from "./IAddressFallbackHandler.sol";
  * @author ATrnd
  */
 interface IAddressEntropy is IAddressFallbackHandler {
-
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -49,21 +48,14 @@ interface IAddressEntropy is IAddressFallbackHandler {
     /// @param segmentIndex The segment index used
     /// @param blockNumber The block number used
     event EntropyGenerated(
-        address indexed requester,
-        address indexed actualCaller,
-        uint256 segmentIndex,
-        uint256 blockNumber
+        address indexed requester, address indexed actualCaller, uint256 segmentIndex, uint256 blockNumber
     );
 
     /// @notice Emitted when an address in the entropy array is updated
     /// @param position The position in the array that was updated
     /// @param oldAddress The address that was replaced
     /// @param newAddress The new address
-    event EntropyAddressUpdated(
-        uint256 indexed position,
-        address oldAddress,
-        address newAddress
-    );
+    event EntropyAddressUpdated(uint256 indexed position, address oldAddress, address newAddress);
 
     /// @notice Emitted when a safety fallback is used
     /// @param component_hash Hashed component name for filtering

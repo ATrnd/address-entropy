@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Script, console} from "forge-std/Script.sol";
-import {AddressDataEntropy} from "../src/implementations/AddressDataEntropy.sol";
+import { Script, console } from "forge-std/Script.sol";
+import { AddressDataEntropy } from "../src/implementations/AddressDataEntropy.sol";
 
 contract TestnetDeploy is Script {
-
     bytes32 private constant DEFAULT_SALT = keccak256("AddressDataEntropy-Testnet");
     uint256 private constant DEPLOYMENT_GAS_LIMIT = 1_500_000;
 
@@ -60,30 +59,26 @@ contract TestnetDeploy is Script {
     function _getNetworkDefaults(address deployer) internal view returns (address[3] memory) {
         uint256 chainId = block.chainid;
 
-        if (chainId == 11155111) {
+        if (chainId == 11_155_111) {
             return [address(0x1), address(0x2), address(0x3)];
         } else if (chainId == 5) {
             return [address(0x1), address(0x2), address(0x3)];
-        } else if (chainId == 80001) {
+        } else if (chainId == 80_001) {
             return [deployer, address(uint160(deployer) + 1), address(uint160(deployer) + 2)];
         } else if (chainId == 360) {
             return [address(0x1), deployer, address(uint160(deployer) + 1)];
         } else {
-            return [
-                deployer,
-                address(uint160(deployer) + 1),
-                address(uint160(deployer) + 2)
-            ];
+            return [deployer, address(uint160(deployer) + 1), address(uint160(deployer) + 2)];
         }
     }
 
     function _getNetworkName(uint256 chainId) internal pure returns (string memory) {
-        if (chainId == 11155111) return "Sepolia";
+        if (chainId == 11_155_111) return "Sepolia";
         if (chainId == 5) return "Goerli";
-        if (chainId == 80001) return "Mumbai";
-        if (chainId == 421613) return "Arbitrum Goerli";
+        if (chainId == 80_001) return "Mumbai";
+        if (chainId == 421_613) return "Arbitrum Goerli";
         if (chainId == 360) return "Shape Mainnet";
-        if (chainId == 31337) return "Anvil Local";
+        if (chainId == 31_337) return "Anvil Local";
         return "Unknown Network";
     }
 
@@ -107,17 +102,12 @@ contract TestnetDeploy is Script {
         console.log("[OK] Network validated");
     }
 
-    function _executeDeployment(DeploymentConfig memory config)
-        internal returns (AddressDataEntropy deployed) {
-
+    function _executeDeployment(DeploymentConfig memory config) internal returns (AddressDataEntropy deployed) {
         console.log("\n=== DEPLOYMENT EXECUTION ===");
 
         uint256 startGas = gasleft();
         vm.startBroadcast();
-        deployed = new AddressDataEntropy{salt: config.salt}(
-            config.owner,
-            config.entropyAddresses
-        );
+        deployed = new AddressDataEntropy{ salt: config.salt }(config.owner, config.entropyAddresses);
         vm.stopBroadcast();
         uint256 gasUsed = startGas - gasleft();
         console.log("[SUCCESS] Contract deployed!");
@@ -128,9 +118,7 @@ contract TestnetDeploy is Script {
         console.log("[OK] Gas usage within expected range");
     }
 
-    function _validatePostDeployment(AddressDataEntropy deployed, DeploymentConfig memory config)
-        internal {
-
+    function _validatePostDeployment(AddressDataEntropy deployed, DeploymentConfig memory config) internal {
         console.log("\n=== POST-DEPLOYMENT VALIDATION ===");
 
         require(address(deployed).code.length > 0, "Contract deployment failed");
@@ -139,7 +127,7 @@ contract TestnetDeploy is Script {
         require(actualOwner == config.owner, "Owner setup failed");
         console.log("[OK] Owner correctly set:", actualOwner);
         vm.startBroadcast();
-        bytes32 testEntropy = deployed.getEntropy(12345, config.owner);
+        bytes32 testEntropy = deployed.getEntropy(12_345, config.owner);
         require(testEntropy != bytes32(0), "Entropy generation failed");
         vm.stopBroadcast();
         console.log("[OK] Basic entropy generation working");
@@ -147,9 +135,7 @@ contract TestnetDeploy is Script {
         console.log("[INFO] State inspection functions correctly removed from production");
     }
 
-    function _generateDeploymentReport(AddressDataEntropy deployed, DeploymentConfig memory config)
-        internal view {
-
+    function _generateDeploymentReport(AddressDataEntropy deployed, DeploymentConfig memory config) internal view {
         console.log("\n=== DEPLOYMENT REPORT ===");
         console.log("Deployment Date:", block.timestamp);
         console.log("Block Number:", block.number);
@@ -184,20 +170,13 @@ contract TestnetDeploy is Script {
         return addr.code.length > 0;
     }
 
-    function getPredictedAddress(address deployer, bytes32 salt)
-        external pure returns (address) {
-
+    function getPredictedAddress(address deployer, bytes32 salt) external pure returns (address) {
         bytes memory bytecode = abi.encodePacked(
             type(AddressDataEntropy).creationCode,
             abi.encode(deployer, [deployer, address(uint160(deployer) + 1), address(uint160(deployer) + 2)])
         );
 
-        bytes32 hash = keccak256(abi.encodePacked(
-            bytes1(0xff),
-            deployer,
-            salt,
-            keccak256(bytecode)
-        ));
+        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, keccak256(bytecode)));
 
         return address(uint160(uint256(hash)));
     }

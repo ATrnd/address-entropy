@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IAddressEntropy} from "../interfaces/IAddressEntropy.sol";
-import {AddressEntropyConstants} from "../constants/AddressEntropyConstants.sol";
-import {AddressSegmentLibrary} from "../libraries/AddressSegmentLibrary.sol";
-import {AddressValidationLibrary} from "../libraries/AddressValidationLibrary.sol";
-import {AddressCyclingLibrary} from "../libraries/AddressCyclingLibrary.sol";
-import {AddressFallbackLibrary} from "../libraries/AddressFallbackLibrary.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IAddressEntropy } from "../interfaces/IAddressEntropy.sol";
+import { AddressEntropyConstants } from "../constants/AddressEntropyConstants.sol";
+import { AddressSegmentLibrary } from "../libraries/AddressSegmentLibrary.sol";
+import { AddressValidationLibrary } from "../libraries/AddressValidationLibrary.sol";
+import { AddressCyclingLibrary } from "../libraries/AddressCyclingLibrary.sol";
+import { AddressFallbackLibrary } from "../libraries/AddressFallbackLibrary.sol";
 
 /**
  * @title AbstractAddressEntropy
@@ -16,10 +16,7 @@ import {AddressFallbackLibrary} from "../libraries/AddressFallbackLibrary.sol";
  *      Complements BlockDataEntropy for identity-based vs temporal-based entropy requirements
  * @author ATrnd
  */
-abstract contract AbstractAddressEntropy is
-    IAddressEntropy,
-    Ownable
-{
+abstract contract AbstractAddressEntropy is IAddressEntropy, Ownable {
     /*//////////////////////////////////////////////////////////////
                             USING STATEMENTS
     //////////////////////////////////////////////////////////////*/
@@ -80,10 +77,7 @@ abstract contract AbstractAddressEntropy is
     /// @dev Validates non-zero seed addresses, initializes entropy pool and cycling indices to zero
     /// @param _initialOwner Contract owner for OpenZeppelin Ownable inheritance
     /// @param _seedAddresses 3-element array of validated non-zero addresses for entropy generation
-    constructor(
-        address _initialOwner,
-        address[ADDRESS_ARRAY_SIZE] memory _seedAddresses
-    ) Ownable(_initialOwner) {
+    constructor(address _initialOwner, address[ADDRESS_ARRAY_SIZE] memory _seedAddresses) Ownable(_initialOwner) {
         // Validate seed addresses - ensure they're not zero
         for (uint256 i = 0; i < ADDRESS_ARRAY_SIZE; i++) {
             if (_seedAddresses[i].isZeroAddress()) {
@@ -142,7 +136,16 @@ abstract contract AbstractAddressEntropy is
     /// @param salt Additional entropy source for randomness enhancement
     /// @param actualCaller The actual caller address to use for entropy generation (not msg.sender)
     /// @return 32-byte entropy value derived from 40-bit address segment with block and transaction context
-    function getEntropy(uint256 salt, address actualCaller) external virtual override onlyOrchestrator returns (bytes32) {
+    function getEntropy(
+        uint256 salt,
+        address actualCaller
+    )
+        external
+        virtual
+        override
+        onlyOrchestrator
+        returns (bytes32)
+    {
         // Validate actualCaller is not zero address
         if (actualCaller == AddressEntropyConstants.ZERO_ADDRESS) {
             _handleAccessControlFailure(
@@ -181,30 +184,29 @@ abstract contract AbstractAddressEntropy is
         }
 
         // Generate entropy
-        bytes32 entropy = keccak256(abi.encode(
-            // Extracted segment
-            currentSegment,
-            s_currentSegmentIndex,
-
-            // Block context for additional entropy
-            block.timestamp,
-            block.number,
-            block.prevrandao,
-            block.basefee,
-            block.coinbase,
-
-            // Transaction context
-            actualCaller,
-            salt,
-            currentTx,
-
-            // Contract state
-            keccak256(abi.encode(s_entropyAddresses))
-        ));
+        bytes32 entropy = keccak256(
+            abi.encode(
+                // Extracted segment
+                currentSegment,
+                s_currentSegmentIndex,
+                // Block context for additional entropy
+                block.timestamp,
+                block.number,
+                block.prevrandao,
+                block.basefee,
+                block.coinbase,
+                // Transaction context
+                actualCaller,
+                salt,
+                currentTx,
+                // Contract state
+                keccak256(abi.encode(s_entropyAddresses))
+            )
+        );
 
         emit EntropyGenerated(
-            msg.sender,    // requester (orchestrator)
-            actualCaller,  // actual caller used for entropy
+            msg.sender, // requester (orchestrator)
+            actualCaller, // actual caller used for entropy
             s_currentSegmentIndex,
             block.number
         );
@@ -251,7 +253,16 @@ abstract contract AbstractAddressEntropy is
     /// @param componentId The component to check
     /// @param errorCode The error code to check
     /// @return The count of this specific error in this component
-    function getComponentErrorCount(uint8 componentId, uint8 errorCode) external view virtual override returns (uint256) {
+    function getComponentErrorCount(
+        uint8 componentId,
+        uint8 errorCode
+    )
+        external
+        view
+        virtual
+        override
+        returns (uint256)
+    {
         return s_componentErrorCounts[componentId][errorCode];
     }
 
@@ -276,61 +287,71 @@ abstract contract AbstractAddressEntropy is
     /// @notice Gets the count of zero address errors in the address extraction component
     /// @return The error count
     function getAddressExtractionZeroAddressCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ADDRESS_EXTRACTION][AddressEntropyConstants.ERROR_ZERO_ADDRESS];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ADDRESS_EXTRACTION][AddressEntropyConstants
+            .ERROR_ZERO_ADDRESS];
     }
 
     /// @notice Gets the count of zero segment errors in the segment extraction component
     /// @return The error count
     function getSegmentExtractionZeroSegmentCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION][AddressEntropyConstants.ERROR_ZERO_SEGMENT];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION][AddressEntropyConstants
+            .ERROR_ZERO_SEGMENT];
     }
 
     /// @notice Gets the count of out of bounds errors in the segment extraction component
     /// @return The error count
     function getSegmentExtractionOutOfBoundsCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION][AddressEntropyConstants.ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION][AddressEntropyConstants
+            .ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS];
     }
 
     /// @notice Gets the count of cycle disruption errors in the entropy generation component
     /// @return The error count
     function getEntropyGenerationCycleDisruptionCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants.ERROR_UPDATE_CYCLE_DISRUPTION];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants
+            .ERROR_UPDATE_CYCLE_DISRUPTION];
     }
 
     /// @notice Gets the count of zero address errors in the entropy generation component
     /// @return The error count
     function getEntropyGenerationZeroAddressCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants.ERROR_ZERO_ADDRESS];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants
+            .ERROR_ZERO_ADDRESS];
     }
 
     /// @notice Gets the count of zero segment errors in entropy generation
     /// @return The error count
     function getEntropyGenerationZeroSegmentCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants.ERROR_ENTROPY_ZERO_SEGMENT];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants
+            .ERROR_ENTROPY_ZERO_SEGMENT];
     }
 
     /// @notice Gets the count of orchestrator not configured errors in the access control component
     /// @return The error count
     function getAccessControlOrchestratorNotConfiguredCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants.ERROR_ORCHESTRATOR_NOT_CONFIGURED];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants
+            .ERROR_ORCHESTRATOR_NOT_CONFIGURED];
     }
 
     /// @notice Gets the count of unauthorized orchestrator errors in the access control component
     /// @return The error count
     function getAccessControlUnauthorizedOrchestratorCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants.ERROR_UNAUTHORIZED_ORCHESTRATOR];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants
+            .ERROR_UNAUTHORIZED_ORCHESTRATOR];
     }
 
     /// @notice Gets the count of orchestrator already configured errors in the access control component
     /// @return The error count
     function getAccessControlOrchestratorAlreadyConfiguredCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants.ERROR_ORCHESTRATOR_ALREADY_CONFIGURED];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants
+            .ERROR_ORCHESTRATOR_ALREADY_CONFIGURED];
     }
 
     /// @notice Gets the count of invalid orchestrator address errors in the access control component
     /// @return The error count
     function getAccessControlInvalidOrchestratorAddressCount() external view virtual override returns (uint256) {
-        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants.ERROR_INVALID_ORCHESTRATOR_ADDRESS];
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants
+            .ERROR_INVALID_ORCHESTRATOR_ADDRESS];
     }
 
     /// @notice Gets the configured orchestrator address
@@ -344,8 +365,7 @@ abstract contract AbstractAddressEntropy is
     /// @dev Uses constants for validation
     /// @return True if orchestrator is set and valid
     function isOrchestratorConfigured() external view virtual override returns (bool) {
-        return s_orchestratorSet &&
-               s_orchestratorAddress != AddressEntropyConstants.ZERO_ADDRESS;
+        return s_orchestratorSet && s_orchestratorAddress != AddressEntropyConstants.ZERO_ADDRESS;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -469,11 +489,7 @@ abstract contract AbstractAddressEntropy is
 
         // Emit the event
         emit SafetyFallbackTriggered(
-            keccak256(bytes(componentName)),
-            keccak256(bytes(functionName)),
-            errorCode,
-            componentName,
-            functionName
+            keccak256(bytes(componentName)), keccak256(bytes(functionName)), errorCode, componentName, functionName
         );
     }
 
@@ -482,11 +498,7 @@ abstract contract AbstractAddressEntropy is
     /// @param componentId Component where error occurred
     /// @param functionName Function where error occurred
     /// @param errorCode Specific error code
-    function _handleAccessControlFailure(
-        uint8 componentId,
-        string memory functionName,
-        uint8 errorCode
-    ) internal {
+    function _handleAccessControlFailure(uint8 componentId, string memory functionName, uint8 errorCode) internal {
         _handleFallback(componentId, functionName, errorCode);
     }
 
@@ -496,9 +508,8 @@ abstract contract AbstractAddressEntropy is
     /// @param errorCode The specific error code
     /// @return The new error count for this component/error combination
     function _incrementComponentErrorCount(uint8 componentId, uint8 errorCode) internal returns (uint256) {
-        s_componentErrorCounts[componentId][errorCode] = AddressFallbackLibrary.incrementComponentErrorCount(
-            s_componentErrorCounts[componentId][errorCode]
-        );
+        s_componentErrorCounts[componentId][errorCode] =
+            AddressFallbackLibrary.incrementComponentErrorCount(s_componentErrorCounts[componentId][errorCode]);
         return s_componentErrorCounts[componentId][errorCode];
     }
 
@@ -515,8 +526,10 @@ abstract contract AbstractAddressEntropy is
         return AddressFallbackLibrary.generateEmergencyEntropy(
             salt,
             txCounter,
-            s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ADDRESS_EXTRACTION][AddressEntropyConstants.ERROR_ZERO_ADDRESS],
-            s_componentErrorCounts[AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION][AddressEntropyConstants.ERROR_ZERO_SEGMENT]
+            s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ADDRESS_EXTRACTION][AddressEntropyConstants
+                .ERROR_ZERO_ADDRESS],
+            s_componentErrorCounts[AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION][AddressEntropyConstants
+                .ERROR_ZERO_SEGMENT]
         );
     }
 

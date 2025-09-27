@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test, console} from "forge-std/Test.sol";
-import {MinimalDeploy} from "../script/MinimalDeploy.s.sol";
-import {AddressDataEntropy} from "../src/implementations/AddressDataEntropy.sol";
+import { Test, console } from "forge-std/Test.sol";
+import { MinimalDeploy } from "../script/MinimalDeploy.s.sol";
+import { AddressDataEntropy } from "../src/implementations/AddressDataEntropy.sol";
 
 /**
  * @title MinimalDeployTest
@@ -11,7 +11,6 @@ import {AddressDataEntropy} from "../src/implementations/AddressDataEntropy.sol"
  * @dev Tests deployment functionality, configuration, and edge cases
  */
 contract MinimalDeployTest is Test {
-
     MinimalDeploy private deployScript;
 
     // Test accounts
@@ -102,8 +101,8 @@ contract MinimalDeployTest is Test {
         vm.setEnv("ENTROPY_ADDRESS_2", "");
         vm.setEnv("ENTROPY_ADDRESS_3", "");
 
-                address[3] memory result = deployScript.getEntropyConfig();
-        
+        address[3] memory result = deployScript.getEntropyConfig();
+
         // Should use network defaults - test that they're not zero
         assertTrue(result[0] != address(0), "First entropy address should not be zero");
         assertTrue(result[1] != address(0), "Second entropy address should not be zero");
@@ -114,8 +113,8 @@ contract MinimalDeployTest is Test {
         // Set chain ID to mainnet
         vm.chainId(1);
 
-                address[3] memory result = deployScript.getNetworkDefaults();
-        
+        address[3] memory result = deployScript.getNetworkDefaults();
+
         assertEq(result[0], address(0x1), "Mainnet should use address(0x1)");
         assertEq(result[1], address(0x2), "Mainnet should use address(0x2)");
         assertEq(result[2], address(0x3), "Mainnet should use address(0x3)");
@@ -123,10 +122,10 @@ contract MinimalDeployTest is Test {
 
     function test_GetNetworkDefaultsSepolia() public {
         // Set chain ID to Sepolia
-        vm.chainId(11155111);
+        vm.chainId(11_155_111);
 
-                address[3] memory result = deployScript.getNetworkDefaults();
-        
+        address[3] memory result = deployScript.getNetworkDefaults();
+
         assertEq(result[0], address(0x1), "Sepolia should use address(0x1)");
         assertEq(result[1], address(0x2), "Sepolia should use address(0x2)");
         assertEq(result[2], address(0x3), "Sepolia should use address(0x3)");
@@ -134,13 +133,13 @@ contract MinimalDeployTest is Test {
 
     function test_GetNetworkDefaultsCustomNetwork() public {
         // Set chain ID to custom network
-        vm.chainId(31337);
+        vm.chainId(31_337);
 
         vm.setEnv("PRIVATE_KEY", vm.toString(uint256(0x1)));
         // The script reads the env var and converts it back to uint256, so we need to match that
         address expectedDeployer = vm.addr(vm.envUint("PRIVATE_KEY"));
 
-                address[3] memory result = deployScript.getNetworkDefaults();
+        address[3] memory result = deployScript.getNetworkDefaults();
 
         assertEq(result[0], expectedDeployer, "Custom network should use deployer address");
         assertEq(result[1], address(uint160(expectedDeployer) + 1), "Custom network should use deployer + 1");
@@ -157,8 +156,8 @@ contract MinimalDeployTest is Test {
         vm.setEnv("ENTROPY_ADDRESS_2", "");
         vm.setEnv("ENTROPY_ADDRESS_3", "");
 
-                address[3] memory result = deployScript.getEntropyConfig();
-        
+        address[3] memory result = deployScript.getEntropyConfig();
+
         assertEq(result[0], entropy1, "First address should be from environment");
         assertTrue(result[1] != address(0), "Second address should use default");
         assertTrue(result[2] != address(0), "Third address should use default");
@@ -166,8 +165,8 @@ contract MinimalDeployTest is Test {
 
     function test_DeploymentOnDifferentNetworks() public {
         uint256[] memory chainIds = new uint256[](2);
-        chainIds[0] = 1;        // Mainnet
-        chainIds[1] = 31337;    // Local
+        chainIds[0] = 1; // Mainnet
+        chainIds[1] = 31_337; // Local
 
         for (uint256 i = 0; i < chainIds.length; i++) {
             vm.chainId(chainIds[i]);
@@ -189,12 +188,10 @@ contract MinimalDeployTest is Test {
         // Deploy contract
         vm.setEnv("PRIVATE_KEY", vm.toString(uint256(0x1)));
 
-        
         // Capture the deployment by calling run and checking events
         // Note: In a real test, you'd capture the actual deployed address
         deployScript.run();
 
-        
         // Test would verify deployed contract works correctly
         assertTrue(true, "Deployed contract functionality verified");
     }
@@ -233,12 +230,11 @@ contract MinimalDeployTest is Test {
 
     function test_ConsoleOutputs() public {
         // Test that console outputs don't cause issues
-        
+
         // The script includes console.log statements
         // This test ensures they don't cause failures
         deployScript.run();
 
-        
         assertTrue(true, "Console outputs work correctly");
     }
 
