@@ -43,14 +43,4 @@ library AddressValidationLibrary {
         return msg.sender == AddressEntropyConstants.ZERO_ADDRESS;
     }
 
-    /*//////////////////////////////////////////////////////////////
-                         EXTRACTION ERROR VALIDATION
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Checks if extraction error should be handled
-    /// @param success The success status of extraction
-    /// @return True if error should be handled
-    function shouldHandleExtractionError(bool success) internal pure returns (bool) {
-        return !success;
-    }
 }

@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {Test, console, Vm} from "forge-std/Test.sol";
 import {AddressDataEntropy} from "../src/implementations/AddressDataEntropy.sol";
 import {AddressDataEntropyTestProxy} from "./mock/AddressDataEntropyTestProxy.sol";
+import {IAddressEntropy} from "../src/interfaces/IAddressEntropy.sol";
 
 /**
  * @title Address Data Entropy Base Test
@@ -30,10 +31,9 @@ contract AddressDataEntropyBaseTest is Test {
 
     // Error code constants for verification
     uint8 internal constant ERROR_ZERO_ADDRESS = 1;
-    uint8 internal constant ERROR_INSUFFICIENT_ADDRESS_DIVERSITY = 2;
-    uint8 internal constant ERROR_ZERO_SEGMENT = 3;
-    uint8 internal constant ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS = 4;
-    uint8 internal constant ERROR_UPDATE_CYCLE_DISRUPTION = 5;
+    uint8 internal constant ERROR_ZERO_SEGMENT = 2;
+    uint8 internal constant ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS = 3;
+    uint8 internal constant ERROR_UPDATE_CYCLE_DISRUPTION = 4;
 
     function setUp() public {
         // Setup addresses
@@ -55,6 +55,9 @@ contract AddressDataEntropyBaseTest is Test {
         // Deploy contract - using test proxy for state inspection functions
         vm.startPrank(owner);
         addressEntropy = new AddressDataEntropyTestProxy(owner, seedAddresses);
+
+        // Configure user as the orchestrator to allow getEntropy calls in tests
+        addressEntropy.setOrchestratorOnce(user);
         vm.stopPrank();
     }
 
@@ -102,7 +105,7 @@ contract AddressDataEntropyBaseTest is Test {
     function test_FirstEntropyCall() public {
         vm.prank(user);
         uint256 salt = 123;
-        bytes32 entropy = addressEntropy.getEntropy(salt);
+        bytes32 entropy = addressEntropy.getEntropy(salt, user);
 
         // Since entropy is non-deterministic, we just verify it's not zero
         assertTrue(entropy != bytes32(0), "Entropy should not be zero");
@@ -121,10 +124,10 @@ contract AddressDataEntropyBaseTest is Test {
         uint256 salt = 123;
 
         // First call
-        bytes32 entropy1 = addressEntropy.getEntropy(salt);
+        bytes32 entropy1 = addressEntropy.getEntropy(salt, user);
 
         // Second call
-        bytes32 entropy2 = addressEntropy.getEntropy(salt);
+        bytes32 entropy2 = addressEntropy.getEntropy(salt, user);
 
         // Entropy should be different even with the same salt
         assertTrue(entropy1 != entropy2, "Entropy values should be different even with same salt");
@@ -144,8 +147,8 @@ contract AddressDataEntropyBaseTest is Test {
         vm.startPrank(user);
 
         // Generate entropy with different salts
-        bytes32 entropy1 = addressEntropy.getEntropy(123);
-        bytes32 entropy2 = addressEntropy.getEntropy(456);
+        bytes32 entropy1 = addressEntropy.getEntropy(123, user);
+        bytes32 entropy2 = addressEntropy.getEntropy(456, user);
 
         // Entropy should be different with different salts
         assertTrue(entropy1 != entropy2, "Entropy should be different with different salts");
@@ -154,15 +157,60 @@ contract AddressDataEntropyBaseTest is Test {
     }
 
     function test_DifferentCallers() public {
-        // Generate entropy from different callers with same salt
+        // With access control + address passing, test different actualCaller addresses
+        vm.prank(user); // user = orchestrator
+        bytes32 entropy1 = addressEntropy.getEntropy(123, user);
+
+        vm.prank(user); // user = orchestrator, but different actualCaller
+        bytes32 entropy2 = addressEntropy.getEntropy(123, user2);
+
+        // Entropy should be different with sequential calls even with same salt
+        assertTrue(entropy1 != entropy2, "Sequential entropy calls should produce different values");
+    }
+
+    /// @notice Test address diversity restoration - multiple different addresses can be used
+    function test_AddressDiversityRestored() public {
+        uint256 baseSalt = 500;
+        address[] memory testAddresses = new address[](5);
+        bytes32[] memory entropies = new bytes32[](5);
+
+        // Create diverse test addresses
+        testAddresses[0] = makeAddr("diverseAddr1");
+        testAddresses[1] = makeAddr("diverseAddr2");
+        testAddresses[2] = makeAddr("diverseAddr3");
+        testAddresses[3] = makeAddr("diverseAddr4");
+        testAddresses[4] = makeAddr("diverseAddr5");
+
+        // Generate entropy using diverse actualCaller addresses (all authorized by orchestrator)
+        for (uint256 i = 0; i < 5; i++) {
+            vm.prank(user); // Orchestrator authorizes
+            entropies[i] = addressEntropy.getEntropy(baseSalt, testAddresses[i]);
+        }
+
+        // Verify all entropies are different (address diversity working)
+        for (uint256 i = 0; i < 5; i++) {
+            for (uint256 j = i + 1; j < 5; j++) {
+                assertTrue(
+                    entropies[i] != entropies[j],
+                    string(abi.encodePacked("Entropy ", vm.toString(i), " and ", vm.toString(j), " should differ"))
+                );
+            }
+        }
+    }
+
+    /// @notice Test actualCaller parameter validation
+    function test_ActualCallerValidation() public {
+        uint256 salt = 999;
+
+        // Test that zero address actualCaller is rejected
         vm.prank(user);
-        bytes32 entropyUser1 = addressEntropy.getEntropy(123);
+        vm.expectRevert(abi.encodeWithSelector(IAddressEntropy.AddressEntropy__InvalidOrchestratorAddress.selector));
+        addressEntropy.getEntropy(salt, address(0));
 
-        vm.prank(user2);
-        bytes32 entropyUser2 = addressEntropy.getEntropy(123);
-
-        // Entropy should be different with different callers
-        assertTrue(entropyUser1 != entropyUser2, "Entropy should be different with different callers");
+        // Test that valid actualCaller works
+        vm.prank(user);
+        bytes32 entropy = addressEntropy.getEntropy(salt, makeAddr("validAddr"));
+        assertTrue(entropy != bytes32(0), "Valid actualCaller should work");
     }
 
     /// ============================================
@@ -176,7 +224,7 @@ contract AddressDataEntropyBaseTest is Test {
         // Call getEntropy multiple times to cycle through address indices
         for (uint256 i = 0; i < 5; i++) {
             vm.prank(user);
-            addressEntropy.getEntropy(i);
+            addressEntropy.getEntropy(i, user);
 
             // Check address index cycling
             (uint256 addrIndex, , ) = addressEntropy.getCurrentIndices();
@@ -191,7 +239,7 @@ contract AddressDataEntropyBaseTest is Test {
         // Call getEntropy multiple times to cycle through segment indices
         for (uint256 i = 0; i < 5; i++) {
             vm.prank(user);
-            addressEntropy.getEntropy(i);
+            addressEntropy.getEntropy(i, user);
 
             // Check segment index cycling
             (, uint256 segIndex, ) = addressEntropy.getCurrentIndices();
@@ -203,30 +251,29 @@ contract AddressDataEntropyBaseTest is Test {
         // Get initial indices
         (, , uint256 initialUpdatePos) = addressEntropy.getCurrentIndices();
 
-        // Call with a new address - should update the address array
-        address newUser = makeAddr("newUser");
-        vm.prank(newUser);
-        addressEntropy.getEntropy(123);
+        // Call with orchestrator - should update the address array
+        vm.prank(user);
+        addressEntropy.getEntropy(123, user);
 
         // Get new indices
         (, , uint256 newUpdatePos) = addressEntropy.getCurrentIndices();
 
-        // Update position should advance by 1 when a new address is added
+        // Update position should advance by 1 when an address is added
         uint256 expectedUpdatePos = (initialUpdatePos + 1) % 3; // 3 is ADDRESS_ARRAY_SIZE
-        assertEq(newUpdatePos, expectedUpdatePos, "Update position should advance when new address is added");
+        assertEq(newUpdatePos, expectedUpdatePos, "Update position should advance when address is added");
     }
 
     function test_UpdatePositionWithExistingAddress() public {
         // First, make sure this user is in the array by calling once
         vm.prank(user);
-        addressEntropy.getEntropy(123);
+        addressEntropy.getEntropy(123, user);
 
         // Get indices after first call
         (, , uint256 initialUpdatePos) = addressEntropy.getCurrentIndices();
 
         // Call again with the same user
         vm.prank(user);
-        addressEntropy.getEntropy(456);
+        addressEntropy.getEntropy(456, user);
 
         // Get indices after second call
         (, , uint256 newUpdatePos) = addressEntropy.getCurrentIndices();
@@ -243,24 +290,23 @@ contract AddressDataEntropyBaseTest is Test {
         // Get initial addresses
         address[3] memory initialAddresses = addressEntropy.getAllEntropyAddresses();
 
-        // Call with a new address
-        address newUser = makeAddr("brandNewUser");
-        vm.prank(newUser);
-        addressEntropy.getEntropy(123);
+        // Call with the orchestrator to trigger address update
+        vm.prank(user);
+        addressEntropy.getEntropy(123, user);
 
         // Get new addresses
         address[3] memory newAddresses = addressEntropy.getAllEntropyAddresses();
 
-        // The address at update position should now be the new user
+        // The address at update position should now be the user (orchestrator)
         bool addressUpdated = false;
         for (uint256 i = 0; i < 3; i++) {
-            if (newAddresses[i] == newUser) {
+            if (newAddresses[i] == user) {
                 addressUpdated = true;
                 break;
             }
         }
 
-        assertTrue(addressUpdated, "New address should be added to the array");
+        assertTrue(addressUpdated, "User (orchestrator) address should be added to the array");
 
         // Only one address should have changed
         uint256 changedCount = 0;
@@ -273,17 +319,16 @@ contract AddressDataEntropyBaseTest is Test {
     }
 
     function test_NoEntropyAddressUpdateWithExistingAddress() public {
-        // First, add the test address to the array
-        address existingUser = makeAddr("existingUser");
-        vm.prank(existingUser);
-        addressEntropy.getEntropy(123);
+        // First, add the orchestrator address to the array
+        vm.prank(user);
+        addressEntropy.getEntropy(123, user);
 
         // Record the state of the array after first call
         address[3] memory initialAddresses = addressEntropy.getAllEntropyAddresses();
 
-        // Call again with the same address
-        vm.prank(existingUser);
-        addressEntropy.getEntropy(456);
+        // Call again with the same orchestrator
+        vm.prank(user);
+        addressEntropy.getEntropy(456, user);
 
         // Get new addresses
         address[3] memory newAddresses = addressEntropy.getAllEntropyAddresses();
@@ -304,7 +349,7 @@ contract AddressDataEntropyBaseTest is Test {
 
         // Call getEntropy once
         vm.prank(user);
-        addressEntropy.getEntropy(123);
+        addressEntropy.getEntropy(123, user);
 
         // Check counter incremented by 1
         assertEq(
@@ -315,7 +360,7 @@ contract AddressDataEntropyBaseTest is Test {
 
         // Call getEntropy again
         vm.prank(user);
-        addressEntropy.getEntropy(456);
+        addressEntropy.getEntropy(456, user);
 
         // Check counter incremented by 1 again
         assertEq(
@@ -326,29 +371,30 @@ contract AddressDataEntropyBaseTest is Test {
     }
 
     function test_TransactionCounterWithMultipleUsers() public {
-        // Get initial transaction counter
+        // NOTE: With access control, only the orchestrator can call getEntropy
+        // This test now verifies multiple calls from the same orchestrator
         uint256 initialCounter = addressEntropy.getTransactionCounter();
 
-        // Call getEntropy with first user
+        // Call getEntropy with orchestrator (user)
         vm.prank(user);
-        addressEntropy.getEntropy(123);
+        addressEntropy.getEntropy(123, user);
 
         // Check counter incremented by 1
         assertEq(
             addressEntropy.getTransactionCounter(),
             initialCounter + 1,
-            "Transaction counter should increment by 1 with first user"
+            "Transaction counter should increment by 1 with first call"
         );
 
-        // Call getEntropy with second user
-        vm.prank(user2);
-        addressEntropy.getEntropy(456);
+        // Call getEntropy again with orchestrator
+        vm.prank(user);
+        addressEntropy.getEntropy(456, user);
 
         // Check counter incremented by 1 again
         assertEq(
             addressEntropy.getTransactionCounter(),
             initialCounter + 2,
-            "Transaction counter should increment by 1 with second user"
+            "Transaction counter should increment by 1 with second call"
         );
     }
 
@@ -362,7 +408,7 @@ contract AddressDataEntropyBaseTest is Test {
 
         // Call getEntropy
         vm.prank(user);
-        addressEntropy.getEntropy(123);
+        addressEntropy.getEntropy(123, user);
 
         // Get emitted logs
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -370,14 +416,16 @@ contract AddressDataEntropyBaseTest is Test {
         // Check for EntropyGenerated event
         bool foundEvent = false;
         bytes32 expectedEventSignature = keccak256(
-            "EntropyGenerated(address,uint256,uint256)"
+            "EntropyGenerated(address,address,uint256,uint256)"
         );
 
         for (uint i = 0; i < entries.length; i++) {
             if (entries[i].topics[0] == expectedEventSignature) {
                 // Check indexed parameters
                 address eventRequester = address(uint160(uint256(entries[i].topics[1])));
-                assertEq(eventRequester, user, "Event requester should be the user");
+                address eventActualCaller = address(uint160(uint256(entries[i].topics[2])));
+                assertEq(eventRequester, user, "Event requester should be the orchestrator");
+                assertEq(eventActualCaller, user, "Event actualCaller should match provided actualCaller");
 
                 // Decode non-indexed parameters
                 (uint256 segmentIndex, uint256 blockNumber) = abi.decode(entries[i].data, (uint256, uint256));
@@ -396,10 +444,9 @@ contract AddressDataEntropyBaseTest is Test {
         // Record logs
         vm.recordLogs();
 
-        // Call with a new address to trigger address update
-        address newUser = makeAddr("eventTestUser");
-        vm.prank(newUser);
-        addressEntropy.getEntropy(123);
+        // Call with orchestrator to trigger address update
+        vm.prank(user);
+        addressEntropy.getEntropy(123, user);
 
         // Get emitted logs
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -418,7 +465,7 @@ contract AddressDataEntropyBaseTest is Test {
 
                 // Decode non-indexed parameters
                 (address oldAddress, address newAddress) = abi.decode(entries[i].data, (address, address));
-                assertEq(newAddress, newUser, "New address should match the caller");
+                assertEq(newAddress, user, "New address should match the orchestrator");
                 assertTrue(oldAddress != address(0), "Old address should not be zero");
 
                 foundEvent = true;
@@ -454,13 +501,12 @@ contract AddressDataEntropyBaseTest is Test {
             );
         }
 
-        // Check hasComponentErrors function
-        for (uint8 componentId = 1; componentId <= 3; componentId++) {
-            assertFalse(
-                addressEntropy.hasComponentErrors(componentId),
-                "Initial hasComponentErrors should be false"
-            );
-        }
+        // Check individual error count functions
+        assertEq(addressEntropy.getAddressExtractionZeroAddressCount(), 0, "Should have no zero address errors initially");
+        assertEq(addressEntropy.getSegmentExtractionZeroSegmentCount(), 0, "Should have no zero segment errors initially");
+        assertEq(addressEntropy.getSegmentExtractionOutOfBoundsCount(), 0, "Should have no out of bounds errors initially");
+        assertEq(addressEntropy.getEntropyGenerationCycleDisruptionCount(), 0, "Should have no cycle disruption errors initially");
+        assertEq(addressEntropy.getEntropyGenerationZeroSegmentCount(), 0, "Should have no entropy zero segment errors initially");
     }
 
     function test_SpecificErrorCounterGetters() public view {

@@ -52,7 +52,12 @@ contract AddressDataEntropyGenerationTest is Test {
         address[3] memory seedAddresses = [seed1, seed2, seed3];
 
         // Deploy proxy with seed addresses
+        vm.prank(owner);
         proxy = new AddressDataEntropyTestProxy(owner, seedAddresses);
+
+        // Configure user1 as orchestrator
+        vm.prank(owner);
+        proxy.setOrchestratorOnce(user1);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -61,7 +66,8 @@ contract AddressDataEntropyGenerationTest is Test {
 
     /// @notice Test that entropy generation produces non-zero values
     function test_EntropyIsNonZero() public {
-        bytes32 entropy = proxy.getEntropy(123);
+        vm.prank(user1);
+        bytes32 entropy = proxy.getEntropy(123, user1);
         assertTrue(entropy != bytes32(0), "Generated entropy should be non-zero");
     }
 
@@ -69,9 +75,12 @@ contract AddressDataEntropyGenerationTest is Test {
     function test_MultipleCallsProduceDifferentEntropy() public {
         uint256 salt = 456;
 
-        bytes32 entropy1 = proxy.getEntropy(salt);
-        bytes32 entropy2 = proxy.getEntropy(salt);
-        bytes32 entropy3 = proxy.getEntropy(salt);
+        vm.prank(user1);
+        bytes32 entropy1 = proxy.getEntropy(salt, user1);
+        vm.prank(user1);
+        bytes32 entropy2 = proxy.getEntropy(salt, user1);
+        vm.prank(user1);
+        bytes32 entropy3 = proxy.getEntropy(salt, user1);
 
         assertTrue(entropy1 != entropy2, "First and second entropy should differ");
         assertTrue(entropy2 != entropy3, "Second and third entropy should differ");
@@ -83,15 +92,18 @@ contract AddressDataEntropyGenerationTest is Test {
         uint256 salt = 789;
 
         // Generate entropy in first block
-        bytes32 entropy1 = proxy.getEntropy(salt);
+        vm.prank(user1);
+        bytes32 entropy1 = proxy.getEntropy(salt, user1);
 
         // Move to next block and generate entropy
         vm.roll(block.number + 1);
-        bytes32 entropy2 = proxy.getEntropy(salt);
+        vm.prank(user1);
+        bytes32 entropy2 = proxy.getEntropy(salt, user1);
 
         // Move to another block
         vm.roll(block.number + 1);
-        bytes32 entropy3 = proxy.getEntropy(salt);
+        vm.prank(user1);
+        bytes32 entropy3 = proxy.getEntropy(salt, user1);
 
         assertTrue(entropy1 != entropy2, "Entropy should differ across blocks");
         assertTrue(entropy2 != entropy3, "Entropy should differ across blocks");
@@ -109,7 +121,8 @@ contract AddressDataEntropyGenerationTest is Test {
 
         // Generate entropy that will cycle through addresses
         for (uint256 i = 0; i < 3; i++) {
-            entropies[i] = proxy.getEntropy(salt);
+            vm.prank(user1);
+            entropies[i] = proxy.getEntropy(salt, user1);
         }
 
         // Verify all entropies are different
@@ -130,7 +143,8 @@ contract AddressDataEntropyGenerationTest is Test {
 
         // Generate enough entropy to cycle through segments (2 full cycles)
         for (uint256 i = 0; i < 8; i++) {
-            entropies[i] = proxy.getEntropy(salt);
+            vm.prank(user1);
+            entropies[i] = proxy.getEntropy(salt, user1);
         }
 
         // Verify entropy varies across segments
@@ -147,7 +161,8 @@ contract AddressDataEntropyGenerationTest is Test {
         // Get initial transaction counter
         uint256 initialCounter = proxy.getTransactionCounter();
 
-        bytes32 entropy1 = proxy.getEntropy(salt);
+        vm.prank(user1);
+        bytes32 entropy1 = proxy.getEntropy(salt, user1);
 
         // Verify counter incremented
         assertEq(
@@ -156,7 +171,8 @@ contract AddressDataEntropyGenerationTest is Test {
             "Transaction counter should increment"
         );
 
-        bytes32 entropy2 = proxy.getEntropy(salt);
+        vm.prank(user1);
+        bytes32 entropy2 = proxy.getEntropy(salt, user1);
 
         // Verify counter incremented again
         assertEq(
@@ -170,9 +186,12 @@ contract AddressDataEntropyGenerationTest is Test {
 
     /// @notice Test that different salts produce different entropy
     function test_DifferentSaltsProduceDifferentEntropy() public {
-        bytes32 entropy1 = proxy.getEntropy(111);
-        bytes32 entropy2 = proxy.getEntropy(222);
-        bytes32 entropy3 = proxy.getEntropy(333);
+        vm.prank(user1);
+        bytes32 entropy1 = proxy.getEntropy(111, user1);
+        vm.prank(user1);
+        bytes32 entropy2 = proxy.getEntropy(222, user1);
+        vm.prank(user1);
+        bytes32 entropy3 = proxy.getEntropy(333, user1);
 
         assertTrue(entropy1 != entropy2, "Different salts should produce different entropy");
         assertTrue(entropy2 != entropy3, "Different salts should produce different entropy");
@@ -190,7 +209,7 @@ contract AddressDataEntropyGenerationTest is Test {
 
         // Generate entropy with new user
         vm.prank(user1);
-        proxy.getEntropy(444);
+        proxy.getEntropy(444, user1);
 
         // Check if user1 was added
         address[3] memory updatedAddresses = proxy.getAllEntropyAddresses();
@@ -208,45 +227,39 @@ contract AddressDataEntropyGenerationTest is Test {
 
     /// @notice Test multiple address updates and cycling
     function test_MultipleAddressUpdates() public {
-        // Add multiple new addresses
+        // Add multiple new addresses (all called by orchestrator user1)
         vm.prank(user1);
-        proxy.getEntropy(555);
+        proxy.getEntropy(555, user1);
 
-        vm.prank(user2);
-        proxy.getEntropy(666);
+        vm.prank(user1);
+        proxy.getEntropy(666, user1);
 
-        vm.prank(user3);
-        proxy.getEntropy(777);
+        vm.prank(user1);
+        proxy.getEntropy(777, user1);
 
         address[3] memory finalAddresses = proxy.getAllEntropyAddresses();
 
-        // Verify new addresses were added
+        // Verify user1 (orchestrator) was added to entropy array
         bool foundUser1 = false;
-        bool foundUser2 = false;
-        bool foundUser3 = false;
 
         for (uint256 i = 0; i < 3; i++) {
             if (finalAddresses[i] == user1) foundUser1 = true;
-            if (finalAddresses[i] == user2) foundUser2 = true;
-            if (finalAddresses[i] == user3) foundUser3 = true;
         }
 
-        assertTrue(foundUser1, "User1 should be in entropy array");
-        assertTrue(foundUser2, "User2 should be in entropy array");
-        assertTrue(foundUser3, "User3 should be in entropy array");
+        assertTrue(foundUser1, "User1 (orchestrator) should be in entropy array");
     }
 
     /// @notice Test that existing addresses don't trigger updates
     function test_ExistingAddressNoUpdate() public {
         // Add user1 first
         vm.prank(user1);
-        proxy.getEntropy(888);
+        proxy.getEntropy(888, user1);
 
         address[3] memory addressesAfterFirst = proxy.getAllEntropyAddresses();
 
         // Call again with same user
         vm.prank(user1);
-        proxy.getEntropy(999);
+        proxy.getEntropy(999, user1);
 
         address[3] memory addressesAfterSecond = proxy.getAllEntropyAddresses();
 
@@ -273,7 +286,8 @@ contract AddressDataEntropyGenerationTest is Test {
 
         // Generate entropy to cycle through addresses
         for (uint256 i = 0; i < 8; i++) {
-            proxy.getEntropy(salt + i);
+            vm.prank(user1);
+            proxy.getEntropy(salt + i, user1);
 
             (uint256 currentAddressIndex, , ) = proxy.getCurrentIndices();
             uint256 expectedIndex = (initialAddressIndex + i + 1) % 3;
@@ -295,7 +309,8 @@ contract AddressDataEntropyGenerationTest is Test {
 
         // Generate entropy to cycle through segments
         for (uint256 i = 0; i < 8; i++) {
-            proxy.getEntropy(salt + i);
+            vm.prank(user1);
+            proxy.getEntropy(salt + i, user1);
 
             (, uint256 currentSegmentIndex, ) = proxy.getCurrentIndices();
             uint256 expectedIndex = (initialSegmentIndex + i + 1) % 4;
@@ -318,27 +333,25 @@ contract AddressDataEntropyGenerationTest is Test {
         testUsers[4] = makeAddr("testUser4");
         testUsers[5] = makeAddr("testUser5");
 
-        // Add new addresses to trigger update position cycling
+        // Add new addresses to trigger update position cycling (using authorized orchestrator)
         for (uint256 i = 0; i < 6; i++) {
-            vm.prank(testUsers[i]);
-            proxy.getEntropy(3333 + i);
+            vm.prank(user1);
+            proxy.getEntropy(3333 + i, user1);
         }
 
-        // Verify that addresses were updated in cycling pattern
+        // Verify that user1 (orchestrator) was added to entropy array
         address[3] memory finalAddresses = proxy.getAllEntropyAddresses();
 
-        // At least some of our test users should be in the final array
-        uint256 testUsersFound = 0;
+        // Check if user1 is in the final array
+        bool foundUser1 = false;
         for (uint256 i = 0; i < 3; i++) {
-            for (uint256 j = 0; j < 6; j++) {
-                if (finalAddresses[i] == testUsers[j]) {
-                    testUsersFound++;
-                    break;
-                }
+            if (finalAddresses[i] == user1) {
+                foundUser1 = true;
+                break;
             }
         }
 
-        assertTrue(testUsersFound >= 3, "Update position cycling should have updated addresses");
+        assertTrue(foundUser1, "Update position cycling should have updated addresses with orchestrator");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -352,7 +365,8 @@ contract AddressDataEntropyGenerationTest is Test {
 
         // Generate many entropies
         for (uint256 i = 0; i < numGenerations; i++) {
-            entropies[i] = proxy.getEntropy(4444 + i);
+            vm.prank(user1);
+            entropies[i] = proxy.getEntropy(4444 + i, user1);
 
             // Verify each entropy is non-zero
             assertTrue(entropies[i] != bytes32(0), "All entropies should be non-zero");
@@ -375,10 +389,9 @@ contract AddressDataEntropyGenerationTest is Test {
         bytes32[] memory entropies = new bytes32[](numUsers);
 
         for (uint256 i = 0; i < numUsers; i++) {
-            address testUser = makeAddr(string(abi.encodePacked("testUser", vm.toString(i))));
-
-            vm.prank(testUser);
-            entropies[i] = proxy.getEntropy(5555 + i);
+            // Use authorized orchestrator for all calls
+            vm.prank(user1);
+            entropies[i] = proxy.getEntropy(5555 + i, user1);
 
             assertTrue(entropies[i] != bytes32(0), "Entropy should be non-zero");
         }
@@ -402,7 +415,8 @@ contract AddressDataEntropyGenerationTest is Test {
 
         // Generate entropy samples and analyze distribution
         for (uint256 i = 0; i < numSamples; i++) {
-            bytes32 entropy = proxy.getEntropy(6666 + i);
+            vm.prank(user1);
+            bytes32 entropy = proxy.getEntropy(6666 + i, user1);
 
             // Analyze first byte of entropy
             uint256 firstByte = uint256(uint8(entropy[0]));
@@ -429,7 +443,8 @@ contract AddressDataEntropyGenerationTest is Test {
         bool foundHighValue = false;
 
         for (uint256 i = 0; i < numSamples; i++) {
-            bytes32 entropy = proxy.getEntropy(7777 + i);
+            vm.prank(user1);
+            bytes32 entropy = proxy.getEntropy(7777 + i, user1);
 
             // Check all bytes in the entropy
             for (uint256 j = 0; j < 32; j++) {
@@ -458,7 +473,8 @@ contract AddressDataEntropyGenerationTest is Test {
         // Force zero address to trigger emergency entropy
         proxy.injectZeroAddressAtCurrentIndex();
 
-        bytes32 emergencyEntropy = proxy.getEntropy(8888);
+        vm.prank(user1);
+        bytes32 emergencyEntropy = proxy.getEntropy(8888, user1);
 
         assertTrue(emergencyEntropy != bytes32(0), "Emergency entropy should be non-zero");
     }
@@ -468,12 +484,14 @@ contract AddressDataEntropyGenerationTest is Test {
         proxy.resetState();
         proxy.injectZeroAddressAtCurrentIndex();
 
-        bytes32 entropy1 = proxy.getEntropy(9999);
+        vm.prank(user1);
+        bytes32 entropy1 = proxy.getEntropy(9999, user1);
 
         proxy.resetState();
         proxy.injectZeroAddressAtCurrentIndex();
 
-        bytes32 entropy2 = proxy.getEntropy(1111);
+        vm.prank(user1);
+        bytes32 entropy2 = proxy.getEntropy(1111, user1);
 
         assertTrue(entropy1 != entropy2, "Emergency entropy should vary with different salts");
     }
@@ -492,7 +510,8 @@ contract AddressDataEntropyGenerationTest is Test {
         proxy.injectZeroAddressAtCurrentIndex();
         
         // Generate entropy - should trigger fallback
-        proxy.getEntropy(1000);
+        vm.prank(user1);
+        proxy.getEntropy(1000, user1);
         
         // Check that address index hasn't changed due to fallback
         (uint256 afterFallbackAddressIndex, , ) = proxy.getCurrentIndices();
@@ -539,13 +558,14 @@ contract AddressDataEntropyGenerationTest is Test {
         
         // Generate entropy samples and analyze distribution
         for (uint256 i = 0; i < numSamples; i++) {
-            bytes32 entropy = proxy.getEntropy(10000 + i);
-            
+            vm.prank(user1);
+            bytes32 entropy = proxy.getEntropy(10000 + i, user1);
+
             // Analyze first byte of entropy
             uint256 firstByte = uint256(uint8(entropy[0]));
             uint256 bucketIndex = firstByte / 32; // 256/8 = 32 values per bucket
             if (bucketIndex >= 8) bucketIndex = 7; // Handle edge case
-            
+
             buckets[bucketIndex]++;
         }
         
@@ -579,12 +599,13 @@ contract AddressDataEntropyGenerationTest is Test {
         uint256 highValueCount = 0;
         
         for (uint256 i = 0; i < numSamples; i++) {
-            bytes32 entropy = proxy.getEntropy(11000 + i);
-            
+            vm.prank(user1);
+            bytes32 entropy = proxy.getEntropy(11000 + i, user1);
+
             // Check all 32 bytes in the entropy
             for (uint256 j = 0; j < 32; j++) {
                 uint8 byteValue = uint8(entropy[j]);
-                
+
                 if (byteValue <= 10) lowValueCount++;
                 if (byteValue >= 245) highValueCount++;
             }
@@ -607,7 +628,7 @@ contract AddressDataEntropyGenerationTest is Test {
         
         // Generate entropy
         vm.prank(user1);
-        proxy.getEntropy(12345);
+        proxy.getEntropy(12345, user1);
         
         // Get logs
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -615,15 +636,17 @@ contract AddressDataEntropyGenerationTest is Test {
         // Check for EntropyGenerated event
         bool foundEvent = false;
         bytes32 expectedEventSignature = keccak256(
-            "EntropyGenerated(address,uint256,uint256)"
+            "EntropyGenerated(address,address,uint256,uint256)"
         );
-        
+
         for (uint i = 0; i < entries.length; i++) {
             if (entries[i].topics[0] == expectedEventSignature) {
                 // Check indexed parameters
                 address eventRequester = address(uint160(uint256(entries[i].topics[1])));
-                assertEq(eventRequester, user1, "Event requester should match caller");
-                
+                address eventActualCaller = address(uint160(uint256(entries[i].topics[2])));
+                assertEq(eventRequester, user1, "Event requester should match orchestrator");
+                assertEq(eventActualCaller, user1, "Event actualCaller should match provided actualCaller");
+
                 foundEvent = true;
                 break;
             }
@@ -636,10 +659,9 @@ contract AddressDataEntropyGenerationTest is Test {
     function test_AddressUpdateEvents() public {
         vm.recordLogs();
         
-        // Generate entropy with new user to trigger address update
-        address newUser = makeAddr("eventTestUser");
-        vm.prank(newUser);
-        proxy.getEntropy(12346);
+        // Generate entropy with orchestrator to trigger address update
+        vm.prank(user1);
+        proxy.getEntropy(12346, user1);
         
         // Get logs
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -654,7 +676,7 @@ contract AddressDataEntropyGenerationTest is Test {
             if (entries[i].topics[0] == expectedEventSignature) {
                 // Decode the event data
                 (, address newAddress) = abi.decode(entries[i].data, (address, address));
-                assertEq(newAddress, newUser, "New address should match the caller");
+                assertEq(newAddress, user1, "New address should match the orchestrator");
                 
                 foundEvent = true;
                 break;
@@ -679,18 +701,19 @@ contract AddressDataEntropyGenerationTest is Test {
         for (uint256 i = 0; i < 9; i++) { // 3 full cycles
             // Get pre-call state
             (uint256 preAddrIndex, , ) = proxy.getCurrentIndices();
-            
+
             // Generate entropy
-            proxy.getEntropy(salt + i);
-            
+            vm.prank(user1);
+            proxy.getEntropy(salt + i, user1);
+
             // Get post-call state
             (uint256 postAddrIndex, , ) = proxy.getCurrentIndices();
-            
+
             // Verify specific mathematical progression
             uint256 expectedIndex = (preAddrIndex + 1) % 3;
             assertEq(
-                postAddrIndex, 
-                expectedIndex, 
+                postAddrIndex,
+                expectedIndex,
                 string(abi.encodePacked("Address index should increment by 1 at iteration ", vm.toString(i)))
             );
         }
@@ -707,18 +730,19 @@ contract AddressDataEntropyGenerationTest is Test {
         for (uint256 i = 0; i < 12; i++) { // 3 full cycles of 4 segments
             // Get pre-call state
             (, uint256 preSegIndex, ) = proxy.getCurrentIndices();
-            
+
             // Generate entropy
-            proxy.getEntropy(salt + i);
-            
+            vm.prank(user1);
+            proxy.getEntropy(salt + i, user1);
+
             // Get post-call state
             (, uint256 postSegIndex, ) = proxy.getCurrentIndices();
-            
+
             // Verify specific mathematical progression
             uint256 expectedIndex = (preSegIndex + 1) % 4;
             assertEq(
-                postSegIndex, 
-                expectedIndex, 
+                postSegIndex,
+                expectedIndex,
                 string(abi.encodePacked("Segment index should increment by 1 at iteration ", vm.toString(i)))
             );
         }
@@ -730,18 +754,21 @@ contract AddressDataEntropyGenerationTest is Test {
 
     /// @notice Fuzz test entropy generation with varying salts
     function testFuzz_EntropyWithVariousSalts(uint256 salt) public {
-        bytes32 entropy = proxy.getEntropy(salt);
+        vm.prank(user1);
+        bytes32 entropy = proxy.getEntropy(salt, user1);
         assertTrue(entropy != bytes32(0), "Entropy should be non-zero for any salt");
     }
 
     /// @notice Test entropy generation edge case handling
     function test_EntropyEdgeCases() public {
         // Test with zero salt
-        bytes32 entropy1 = proxy.getEntropy(0);
+        vm.prank(user1);
+        bytes32 entropy1 = proxy.getEntropy(0, user1);
         assertTrue(entropy1 != bytes32(0), "Entropy should be non-zero even with zero salt");
 
         // Test with max uint256 salt
-        bytes32 entropy2 = proxy.getEntropy(type(uint256).max);
+        vm.prank(user1);
+        bytes32 entropy2 = proxy.getEntropy(type(uint256).max, user1);
         assertTrue(entropy2 != bytes32(0), "Entropy should be non-zero with max salt");
 
         // Verify they're different
@@ -753,19 +780,24 @@ contract AddressDataEntropyGenerationTest is Test {
         bytes32[] memory entropies = new bytes32[](5);
 
         // Generate entropy under different block conditions
-        entropies[0] = proxy.getEntropy(1234);
+        vm.prank(user1);
+        entropies[0] = proxy.getEntropy(1234, user1);
 
         vm.roll(block.number + 100);
-        entropies[1] = proxy.getEntropy(1234);
+        vm.prank(user1);
+        entropies[1] = proxy.getEntropy(1234, user1);
 
         vm.warp(block.timestamp + 3600);
-        entropies[2] = proxy.getEntropy(1234);
+        vm.prank(user1);
+        entropies[2] = proxy.getEntropy(1234, user1);
 
         vm.roll(1);
-        entropies[3] = proxy.getEntropy(1234);
+        vm.prank(user1);
+        entropies[3] = proxy.getEntropy(1234, user1);
 
         vm.warp(1);
-        entropies[4] = proxy.getEntropy(1234);
+        vm.prank(user1);
+        entropies[4] = proxy.getEntropy(1234, user1);
 
         // Verify all are different
         for (uint256 i = 0; i < 5; i++) {

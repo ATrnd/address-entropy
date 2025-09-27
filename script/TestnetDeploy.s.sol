@@ -139,7 +139,7 @@ contract TestnetDeploy is Script {
         require(actualOwner == config.owner, "Owner setup failed");
         console.log("[OK] Owner correctly set:", actualOwner);
         vm.startBroadcast();
-        bytes32 testEntropy = deployed.getEntropy(12345);
+        bytes32 testEntropy = deployed.getEntropy(12345, config.owner);
         require(testEntropy != bytes32(0), "Entropy generation failed");
         vm.stopBroadcast();
         console.log("[OK] Basic entropy generation working");

@@ -137,10 +137,11 @@ contract MinimalDeployTest is Test {
         vm.chainId(31337);
 
         vm.setEnv("PRIVATE_KEY", vm.toString(uint256(0x1)));
-        address expectedDeployer = vm.addr(uint256(0x1));
+        // The script reads the env var and converts it back to uint256, so we need to match that
+        address expectedDeployer = vm.addr(vm.envUint("PRIVATE_KEY"));
 
                 address[3] memory result = deployScript.getNetworkDefaults();
-        
+
         assertEq(result[0], expectedDeployer, "Custom network should use deployer address");
         assertEq(result[1], address(uint160(expectedDeployer) + 1), "Custom network should use deployer + 1");
         assertEq(result[2], address(uint160(expectedDeployer) + 2), "Custom network should use deployer + 2");

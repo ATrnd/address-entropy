@@ -5,7 +5,9 @@
 ![Solidity](https://img.shields.io/badge/Solidity-0.8.28-363636?style=flat&logo=solidity)
 ![Foundry](https://img.shields.io/badge/Foundry-Latest-000000?style=flat)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat)
-![Build](https://img.shields.io/badge/Build-Passing-success?style=flat)
+![Tests](https://github.com/ATrnd/address-entropy/workflows/🧪%20Tests%20&%20Quality/badge.svg)
+![Security](https://github.com/ATrnd/address-entropy/workflows/🔒%20Security%20Analysis/badge.svg)
+![Quality](https://github.com/ATrnd/address-entropy/workflows/🎨%20Code%20Quality/badge.svg)
 
 **[⚡] Address-based entropy engine // 160→40bit segmentation // Crash-immune design**
 
@@ -53,7 +55,9 @@ keccak256(
   block.timestamp,    // Block context
   block.number,
   block.prevrandao,
-  msg.sender,         // Caller context
+  block.basefee,
+  block.coinbase,
+  actualCaller,       // Actual caller (from orchestrator)
   salt,               // User input
   txCounter,          // Request number
   stateHash           // Address array hash
@@ -74,33 +78,43 @@ keccak256(
 | **Zero Address Input** | `addr == address(0)` | Generate fallback segment | Component ID 1, Error 1 |
 | **Segment Index OOB** | `index >= 4` | Reset to 0, use fallback | Component ID 2, Error 4 |
 | **Zero Segment Extract** | `segment == 0` | Generate deterministic fallback | Component ID 2, Error 3 |
-| **msg.sender == 0** | Edge case check | Skip state update, log error | Component ID 3, Error 1 |
+| **Orchestrator Not Set** | Access control check | Revert with error | Component ID 4, Error 6 |
+| **Unauthorized Caller** | `msg.sender != orchestrator` | Revert with error | Component ID 4, Error 7 |
+| **Zero Address in Access Control** | `actualCaller == 0` or `_orchestrator == 0` | Revert with error | Component ID 4, Error 9 |
 | **Extraction Failure** | Try-catch on segment ops | Emergency entropy path | Component ID varies |
 
 ### Fallback Architecture
 ```
-getEntropy() → ALWAYS returns bytes32
+getEntropy(salt, actualCaller) → ALWAYS returns bytes32
+    │
+    ├── Access Control: Check orchestrator authorization
     │
     ├── Normal Path: Extract → Combine → Return
     │
     └── Failure Path: Emergency → Combine → Return
         │
-        └── Uses: block.timestamp + block.number +
-                  msg.sender + salt + error_counts
+        └── Uses: block.timestamp + block.number + block.prevrandao +
+                  actualCaller + salt + error_counts
 ```
 
 ## Core Architecture
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Address[3]    │    │  Segment Extract │    │    Entropy      │
-│   Cycling Pool  │───▶│  (4x40-bit segs) │───▶│   Generation    │
+│   Orchestrator  │    │   Access Control │    │    Entropy      │
+│   Authorization │───▶│   Validation     │───▶│   Generation    │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
          │                        │                       │
          ▼                        ▼                       ▼
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Update Position │    │  Fallback Safety │    │   bytes32       │
-│ Auto-cycling    │    │  Zero Protection │    │   Output        │
+│   Address[3]    │    │  Segment Extract │    │   bytes32       │
+│   Cycling Pool  │───▶│  (4x40-bit segs) │───▶│   Output        │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                        │                       │
+         ▼                        ▼                       ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ Update Position │    │  Fallback Safety │    │ Error Tracking  │
+│ Auto-cycling    │    │  Zero Protection │    │ Component-Based │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
@@ -109,12 +123,16 @@ getEntropy() → ALWAYS returns bytes32
 ### Public Functions
 
 #### Core Entropy Generation
-- `getEntropy(uint256 salt) external returns (bytes32)` - Primary entropy generation function with user-provided salt
+- `getEntropy(uint256 salt, address actualCaller) external returns (bytes32)` - Primary entropy generation function with user-provided salt and actual caller address (orchestrator-only)
+
+#### Access Control Management
+- `setOrchestratorOnce(address _orchestrator) external` - Configure the authorized orchestrator address (owner-only, one-time)
+- `getOrchestrator() external view returns (address)` - Get the configured orchestrator address
+- `isOrchestratorConfigured() external view returns (bool)` - Check if orchestrator has been configured
 
 #### Error Monitoring & Health Checks
 - `getComponentErrorCount(uint8 componentId, uint8 errorCode) external view returns (uint256)` - Get specific error count for component/error pair
 - `getComponentTotalErrorCount(uint8 componentId) external view returns (uint256)` - Get total error count for a component
-- `hasComponentErrors(uint8 componentId) external view returns (bool)` - Check if component has any errors
 
 #### Component-Specific Error Queries
 - `getAddressExtractionZeroAddressCount() external view returns (uint256)` - Zero address errors in address extraction
@@ -123,6 +141,12 @@ getEntropy() → ALWAYS returns bytes32
 - `getEntropyGenerationZeroAddressCount() external view returns (uint256)` - Zero address errors in entropy generation
 - `getEntropyGenerationZeroSegmentCount() external view returns (uint256)` - Zero segment errors in entropy generation
 - `getEntropyGenerationCycleDisruptionCount() external view returns (uint256)` - Cycle disruption errors in entropy generation
+
+#### Access Control Error Queries
+- `getAccessControlOrchestratorNotConfiguredCount() external view returns (uint256)` - Orchestrator not configured errors
+- `getAccessControlUnauthorizedOrchestratorCount() external view returns (uint256)` - Unauthorized orchestrator errors
+- `getAccessControlOrchestratorAlreadyConfiguredCount() external view returns (uint256)` - Orchestrator already configured errors
+- `getAccessControlInvalidOrchestratorAddressCount() external view returns (uint256)` - Invalid orchestrator address errors
 
 #### Ownership (Inherited from OpenZeppelin)
 - `owner() external view returns (address)` - Get current contract owner
@@ -133,12 +157,13 @@ getEntropy() → ALWAYS returns bytes32
 
 #### Core Processing
 - `_extractAddressSegment(address addr, uint256 segmentIndex) internal returns (bytes5)` - Extract specific 40-bit segment from address
-- `_updateEntropyState() internal` - Update cycling indices and address array after entropy generation
+- `_updateEntropyState(address actualCaller) internal` - Update cycling indices and address array after entropy generation with actual caller
 - `_tryUpdateAddress(address newAddress) internal returns (bool)` - Attempt to add new address to entropy pool
 - `_incrementTransactionCounter() internal returns (uint256)` - Increment and return transaction counter
 
 #### Fallback & Error Handling
 - `_handleFallback(uint8 componentId, string memory functionName, uint8 errorCode) internal` - Handle fallback events with tracking
+- `_handleAccessControlFailure(uint8 componentId, string memory functionName, uint8 errorCode) internal` - Handle access control failures
 - `_incrementComponentErrorCount(uint8 componentId, uint8 errorCode) internal returns (uint256)` - Increment error counters
 - `_generateEmergencyEntropy(uint256 salt, uint256 txCounter) internal view returns (bytes32)` - Generate emergency entropy when normal flow fails
 - `_getComponentName(uint8 componentId) internal pure returns (string memory)` - Convert component ID to name string
@@ -163,7 +188,6 @@ getEntropy() → ALWAYS returns bytes32
 - `isZeroAddress(address addr) internal pure returns (bool)` - Check if address is zero
 - `isZeroValue(uint256 value) internal pure returns (bool)` - Check if uint256 value is zero
 - `isMsgSenderZero() internal view returns (bool)` - Check if msg.sender is zero address
-- `shouldHandleExtractionError(bool success) internal pure returns (bool)` - Determine if extraction error needs handling
 
 #### AddressFallbackLibrary
 - `getComponentName(uint8 componentId) internal pure returns (string memory)` - Get component name from ID

@@ -62,6 +62,7 @@ library AddressFallbackLibrary {
         if (componentId == AddressEntropyConstants.COMPONENT_ADDRESS_EXTRACTION) return AddressEntropyConstants.COMPONENT_NAME_ADDRESS_EXTRACTION;
         if (componentId == AddressEntropyConstants.COMPONENT_SEGMENT_EXTRACTION) return AddressEntropyConstants.COMPONENT_NAME_SEGMENT_EXTRACTION;
         if (componentId == AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION) return AddressEntropyConstants.COMPONENT_NAME_ENTROPY_GENERATION;
+        if (componentId == AddressEntropyConstants.COMPONENT_ACCESS_CONTROL) return AddressEntropyConstants.COMPONENT_NAME_ACCESS_CONTROL;
         return AddressEntropyConstants.COMPONENT_NAME_UNKNOWN;
     }
 

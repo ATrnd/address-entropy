@@ -32,11 +32,10 @@ contract AddressDataEntropySafetyTest is Test {
     uint8 constant COMPONENT_ENTROPY_GENERATION = 3;
     
     uint8 constant ERROR_ZERO_ADDRESS = 1;
-    uint8 constant ERROR_INSUFFICIENT_ADDRESS_DIVERSITY = 2;
-    uint8 constant ERROR_ZERO_SEGMENT = 3;
-    uint8 constant ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS = 4;
-    uint8 constant ERROR_UPDATE_CYCLE_DISRUPTION = 5;
-    uint8 constant ERROR_ENTROPY_ZERO_SEGMENT = 6;
+    uint8 constant ERROR_ZERO_SEGMENT = 2;
+    uint8 constant ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS = 3;
+    uint8 constant ERROR_UPDATE_CYCLE_DISRUPTION = 4;
+    uint8 constant ERROR_ENTROPY_ZERO_SEGMENT = 5;
 
     string constant FUNC_EXTRACT_ADDRESS_SEGMENT = "extractAddressSegment";
     string constant FUNC_GET_ENTROPY = "getEntropy";
@@ -57,7 +56,12 @@ contract AddressDataEntropySafetyTest is Test {
         seedAddresses[2] = makeAddr("seed3");
         
         // Deploy proxy with seed addresses
+        vm.prank(owner);
         proxy = new AddressDataEntropyTestProxy(owner, seedAddresses);
+
+        // Configure user1 as orchestrator
+        vm.prank(owner);
+        proxy.setOrchestratorOnce(user1);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -77,7 +81,8 @@ contract AddressDataEntropySafetyTest is Test {
         vm.recordLogs();
         
         // Execute - should trigger zero address fallback
-        bytes32 entropy = proxy.getEntropy(12345);
+        vm.prank(user1);
+        bytes32 entropy = proxy.getEntropy(12345, user1);
         
         // Verify entropy is still generated (emergency entropy)
         assertTrue(entropy != bytes32(0), "Should generate emergency entropy despite zero address");
@@ -192,7 +197,8 @@ contract AddressDataEntropySafetyTest is Test {
         vm.recordLogs();
         
         // Execute - should handle cascading failures gracefully
-        bytes32 entropy = proxy.getEntropy(54321);
+        vm.prank(user1);
+        bytes32 entropy = proxy.getEntropy(54321, user1);
         
         // Verify entropy is still generated despite all errors
         assertTrue(entropy != bytes32(0), "Should generate entropy despite cascading failures");
@@ -219,14 +225,16 @@ contract AddressDataEntropySafetyTest is Test {
         proxy.injectZeroAddressAtCurrentIndex();
         
         // Generate entropy in error state
-        bytes32 errorEntropy = proxy.getEntropy(11111);
+        vm.prank(user1);
+        bytes32 errorEntropy = proxy.getEntropy(11111, user1);
         assertTrue(errorEntropy != bytes32(0), "Should generate entropy in error state");
         
         // Step 2: Recover from error state
         proxy.resetState(); // This should clear error conditions
         
         // Generate entropy in normal state
-        bytes32 normalEntropy = proxy.getEntropy(22222);
+        vm.prank(user1);
+        bytes32 normalEntropy = proxy.getEntropy(22222, user1);
         assertTrue(normalEntropy != bytes32(0), "Should generate entropy in normal state");
         
         // Verify entropies are different
@@ -244,9 +252,10 @@ contract AddressDataEntropySafetyTest is Test {
         proxy.forceIncrementComponentErrorCount(COMPONENT_ADDRESS_EXTRACTION, ERROR_ZERO_ADDRESS);
         
         // Verify only address extraction has errors
-        assertTrue(proxy.hasComponentErrors(COMPONENT_ADDRESS_EXTRACTION), "Address extraction should have errors");
-        assertFalse(proxy.hasComponentErrors(COMPONENT_SEGMENT_EXTRACTION), "Segment extraction should not have errors");
-        assertFalse(proxy.hasComponentErrors(COMPONENT_ENTROPY_GENERATION), "Entropy generation should not have errors");
+        assertGt(proxy.getAddressExtractionZeroAddressCount(), 0, "Address extraction should have zero address errors");
+        assertEq(proxy.getSegmentExtractionZeroSegmentCount(), 0, "Segment extraction should not have errors");
+        assertEq(proxy.getEntropyGenerationCycleDisruptionCount(), 0, "Entropy generation should not have cycle disruption errors");
+        assertEq(proxy.getEntropyGenerationZeroSegmentCount(), 0, "Entropy generation should not have zero segment errors");
         
         // Test specific error counts
         assertEq(proxy.getComponentTotalErrorCount(COMPONENT_ADDRESS_EXTRACTION), 1, "Address extraction total should be 1");
@@ -257,9 +266,10 @@ contract AddressDataEntropySafetyTest is Test {
         proxy.forceIncrementComponentErrorCount(COMPONENT_SEGMENT_EXTRACTION, ERROR_ZERO_SEGMENT);
         
         // Verify both components have errors now
-        assertTrue(proxy.hasComponentErrors(COMPONENT_ADDRESS_EXTRACTION), "Address extraction should still have errors");
-        assertTrue(proxy.hasComponentErrors(COMPONENT_SEGMENT_EXTRACTION), "Segment extraction should now have errors");
-        assertFalse(proxy.hasComponentErrors(COMPONENT_ENTROPY_GENERATION), "Entropy generation should still not have errors");
+        assertGt(proxy.getAddressExtractionZeroAddressCount(), 0, "Address extraction should still have zero address errors");
+        assertGt(proxy.getSegmentExtractionZeroSegmentCount(), 0, "Segment extraction should now have zero segment errors");
+        assertEq(proxy.getEntropyGenerationCycleDisruptionCount(), 0, "Entropy generation should still not have cycle disruption errors");
+        assertEq(proxy.getEntropyGenerationZeroSegmentCount(), 0, "Entropy generation should still not have zero segment errors");
     }
 
     /// @notice Test specific error code isolation within components
@@ -297,18 +307,21 @@ contract AddressDataEntropySafetyTest is Test {
     /// @notice Test extreme boundary conditions
     function test_ExtremeBoundaryConditions() public {
         // Test with maximum uint256 salt
-        bytes32 entropy1 = proxy.getEntropy(type(uint256).max);
+        vm.prank(user1);
+        bytes32 entropy1 = proxy.getEntropy(type(uint256).max, user1);
         assertTrue(entropy1 != bytes32(0), "Should handle maximum uint256 salt");
         
         // Test with address(0) - but inject a valid address first to avoid complete failure
         proxy.resetState();
-        bytes32 entropy2 = proxy.getEntropy(0);
+        vm.prank(user1);
+        bytes32 entropy2 = proxy.getEntropy(0, user1);
         assertTrue(entropy2 != bytes32(0), "Should handle zero salt");
         
         // Test with extreme block conditions
         vm.roll(type(uint256).max - 1);
         vm.warp(type(uint256).max - 1);
-        bytes32 entropy3 = proxy.getEntropy(12345);
+        vm.prank(user1);
+        bytes32 entropy3 = proxy.getEntropy(12345, user1);
         assertTrue(entropy3 != bytes32(0), "Should handle extreme block conditions");
         
         // Verify all entropies are different
@@ -320,15 +333,18 @@ contract AddressDataEntropySafetyTest is Test {
     /// @notice Test edge case addresses
     function test_EdgeCaseAddresses() public {
         // Test with low-value addresses
-        bytes32 entropy1 = proxy.getEntropy(11111);
+        vm.prank(user1);
+        bytes32 entropy1 = proxy.getEntropy(11111, user1);
         assertTrue(entropy1 != bytes32(0), "Should handle low-value addresses");
 
         // Test with high-value addresses
-        bytes32 entropy2 = proxy.getEntropy(22222);
+        vm.prank(user1);
+        bytes32 entropy2 = proxy.getEntropy(22222, user1);
         assertTrue(entropy2 != bytes32(0), "Should handle high-value addresses");
 
         // Test with patterned addresses
-        bytes32 entropy3 = proxy.getEntropy(33333);
+        vm.prank(user1);
+        bytes32 entropy3 = proxy.getEntropy(33333, user1);
         assertTrue(entropy3 != bytes32(0), "Should handle patterned addresses");
         
         // Verify uniqueness
@@ -379,8 +395,10 @@ contract AddressDataEntropySafetyTest is Test {
         proxy.injectZeroAddressAtCurrentIndex();
         
         // Generate emergency entropy with same salt
-        bytes32 emergency1 = proxy.getEntropy(55555);
-        bytes32 emergency2 = proxy.getEntropy(55555);
+        vm.prank(user1);
+        bytes32 emergency1 = proxy.getEntropy(55555, user1);
+        vm.prank(user1);
+        bytes32 emergency2 = proxy.getEntropy(55555, user1);
         
         // Should be different due to transaction counter
         assertTrue(emergency1 != emergency2, "Emergency entropy should vary even with same salt");
@@ -388,7 +406,8 @@ contract AddressDataEntropySafetyTest is Test {
         // Test with different salts
         proxy.resetState();
         proxy.injectZeroAddressAtCurrentIndex();
-        bytes32 emergency3 = proxy.getEntropy(66666);
+        vm.prank(user1);
+        bytes32 emergency3 = proxy.getEntropy(66666, user1);
         
         assertTrue(emergency1 != emergency3, "Emergency entropy should vary with different salts");
     }
@@ -406,7 +425,8 @@ contract AddressDataEntropySafetyTest is Test {
         bytes32[] memory entropies = new bytes32[](10);
         
         for (uint256 i = 0; i < 10; i++) {
-            entropies[i] = proxy.getEntropy(70000 + i);
+            vm.prank(user1);
+            entropies[i] = proxy.getEntropy(70000 + i, user1);
             assertTrue(entropies[i] != bytes32(0), "Should continue generating entropy despite persistent errors");
         }
         
@@ -426,7 +446,8 @@ contract AddressDataEntropySafetyTest is Test {
         
         bytes32[] memory errorEntropies = new bytes32[](5);
         for (uint256 i = 0; i < 5; i++) {
-            errorEntropies[i] = proxy.getEntropy(80000 + i);
+            vm.prank(user1);
+            errorEntropies[i] = proxy.getEntropy(80000 + i, user1);
         }
         
         // Phase 2: Recovery
@@ -434,7 +455,8 @@ contract AddressDataEntropySafetyTest is Test {
         
         bytes32[] memory normalEntropies = new bytes32[](5);
         for (uint256 i = 0; i < 5; i++) {
-            normalEntropies[i] = proxy.getEntropy(90000 + i);
+            vm.prank(user1);
+            normalEntropies[i] = proxy.getEntropy(90000 + i, user1);
         }
         
         // Verify both phases generate valid entropy
@@ -557,7 +579,8 @@ contract AddressDataEntropySafetyTest is Test {
         // Generate emergency entropy with different salt values
         bytes32[] memory emergencyEntropies = new bytes32[](10);
         for (uint256 i = 0; i < 10; i++) {
-            emergencyEntropies[i] = proxy.getEntropy(1000 + i);
+            vm.prank(user1);
+            emergencyEntropies[i] = proxy.getEntropy(1000 + i, user1);
             assertTrue(emergencyEntropies[i] != bytes32(0), "Emergency entropy should be non-zero");
         }
         
@@ -614,7 +637,8 @@ contract AddressDataEntropySafetyTest is Test {
         uint256 initialErrorCount = proxy.getEntropyGenerationZeroAddressCount();
         
         // Generate entropy in error state
-        bytes32 errorEntropy = proxy.getEntropy(4000);
+        vm.prank(user1);
+        bytes32 errorEntropy = proxy.getEntropy(4000, user1);
         assertTrue(errorEntropy != bytes32(0), "Should generate entropy despite zero address");
         assertTrue(
             proxy.getEntropyGenerationZeroAddressCount() > initialErrorCount,
@@ -625,16 +649,19 @@ contract AddressDataEntropySafetyTest is Test {
         proxy.resetState(); // Clear error conditions
         
         // Generate normal entropy
-        bytes32 normalEntropy = proxy.getEntropy(4001);
+        vm.prank(user1);
+        bytes32 normalEntropy = proxy.getEntropy(4001, user1);
         assertTrue(normalEntropy != bytes32(0), "Should generate normal entropy after recovery");
         
         // Phase 3: Verification phase
         assertTrue(errorEntropy != normalEntropy, "Error and normal entropy should differ");
         
         // Verify system can handle mixed operations
-        bytes32 mixedEntropy1 = proxy.getEntropy(4002);
+        vm.prank(user1);
+        bytes32 mixedEntropy1 = proxy.getEntropy(4002, user1);
         proxy.injectZeroAddressAtCurrentIndex(); // Re-inject error
-        bytes32 mixedEntropy2 = proxy.getEntropy(4003);
+        vm.prank(user1);
+        bytes32 mixedEntropy2 = proxy.getEntropy(4003, user1);
         
         assertTrue(mixedEntropy1 != mixedEntropy2, "Mixed operations should produce different entropy");
     }
@@ -708,7 +735,8 @@ contract AddressDataEntropySafetyTest is Test {
         
         bytes32[] memory consecutiveEntropies = new bytes32[](5);
         for (uint256 i = 0; i < 5; i++) {
-            consecutiveEntropies[i] = proxy.getEntropy(5000 + i);
+            vm.prank(user1);
+            consecutiveEntropies[i] = proxy.getEntropy(5000 + i, user1);
             assertTrue(consecutiveEntropies[i] != bytes32(0), "Each consecutive entropy should be valid");
         }
         
@@ -738,12 +766,14 @@ contract AddressDataEntropySafetyTest is Test {
             if (i % 2 == 0) {
                 // Even indices: normal operation
                 proxy.resetState();
-                mixedEntropies[i] = proxy.getEntropy(6000 + i);
+                vm.prank(user1);
+                mixedEntropies[i] = proxy.getEntropy(6000 + i, user1);
             } else {
                 // Odd indices: error condition
                 proxy.resetState();
                 proxy.injectZeroAddressAtCurrentIndex();
-                mixedEntropies[i] = proxy.getEntropy(6000 + i);
+                vm.prank(user1);
+                mixedEntropies[i] = proxy.getEntropy(6000 + i, user1);
             }
             
             assertTrue(mixedEntropies[i] != bytes32(0), "All mixed operations should produce valid entropy");
@@ -799,7 +829,7 @@ contract AddressDataEntropySafetyTest is Test {
         // Test exposed updateEntropyState
         (uint256 initialAddrIndex, uint256 initialSegIndex, ) = proxy.getCurrentIndices();
 
-        proxy.exposedUpdateEntropyState();
+        proxy.exposedUpdateEntropyState(user1);
 
         (uint256 newAddrIndex, uint256 newSegIndex, ) = proxy.getCurrentIndices();
         

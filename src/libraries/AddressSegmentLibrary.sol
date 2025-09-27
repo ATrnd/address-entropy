@@ -60,7 +60,7 @@ library AddressSegmentLibrary {
     /// @notice Generates fallback segments for a zero address
     /// @return A fixed-size array of generated segments
     function generateFallbackSegments() internal view returns (bytes5[SEGMENTS_PER_ADDRESS] memory) {
-        bytes5[SEGMENTS_PER_ADDRESS] memory segments;
+        bytes5[SEGMENTS_PER_ADDRESS] memory segments = [bytes5(0), bytes5(0), bytes5(0), bytes5(0)];
 
         for (uint256 i = 0; i < SEGMENTS_PER_ADDRESS; i++) {
             segments[i] = bytes5(bytes20(

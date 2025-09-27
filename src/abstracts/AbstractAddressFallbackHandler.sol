@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import {IAddressFallbackHandler} from "../interfaces/IAddressFallbackHandler.sol";
 import {AddressEntropyConstants} from "../constants/AddressEntropyConstants.sol";
-import {AddressEntropyEvents} from "../constants/AddressEntropyEvents.sol";
 import {AddressFallbackLibrary} from "../libraries/AddressFallbackLibrary.sol";
 
 /**
@@ -43,12 +42,6 @@ abstract contract AbstractAddressFallbackHandler is IAddressFallbackHandler {
     );
 
     /*//////////////////////////////////////////////////////////////
-                                ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Errors are inherited from IAddressFallbackHandler interface
-
-    /*//////////////////////////////////////////////////////////////
                         EXTERNAL VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -65,13 +58,6 @@ abstract contract AbstractAddressFallbackHandler is IAddressFallbackHandler {
     /// @return Total error count for the component
     function getComponentTotalErrorCount(uint8 componentId) external view virtual override returns (uint256) {
         return _calculateComponentTotalErrorCount(componentId);
-    }
-
-    /// @notice Checks if a component has experienced any errors
-    /// @param componentId The component to check
-    /// @return Whether the component has experienced any errors
-    function hasComponentErrors(uint8 componentId) external view virtual override returns (bool) {
-        return _checkComponentHasErrors(componentId);
     }
 
     /// @notice Gets the count of zero address errors in the address extraction component
@@ -108,6 +94,30 @@ abstract contract AbstractAddressFallbackHandler is IAddressFallbackHandler {
     /// @return The error count
     function getEntropyGenerationZeroSegmentCount() external view virtual override returns (uint256) {
         return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ENTROPY_GENERATION][AddressEntropyConstants.ERROR_ENTROPY_ZERO_SEGMENT];
+    }
+
+    /// @notice Gets the count of orchestrator not configured errors in the access control component
+    /// @return The error count
+    function getAccessControlOrchestratorNotConfiguredCount() external view virtual override returns (uint256) {
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants.ERROR_ORCHESTRATOR_NOT_CONFIGURED];
+    }
+
+    /// @notice Gets the count of unauthorized orchestrator errors in the access control component
+    /// @return The error count
+    function getAccessControlUnauthorizedOrchestratorCount() external view virtual override returns (uint256) {
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants.ERROR_UNAUTHORIZED_ORCHESTRATOR];
+    }
+
+    /// @notice Gets the count of orchestrator already configured errors in the access control component
+    /// @return The error count
+    function getAccessControlOrchestratorAlreadyConfiguredCount() external view virtual override returns (uint256) {
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants.ERROR_ORCHESTRATOR_ALREADY_CONFIGURED];
+    }
+
+    /// @notice Gets the count of invalid orchestrator address errors in the access control component
+    /// @return The error count
+    function getAccessControlInvalidOrchestratorAddressCount() external view virtual override returns (uint256) {
+        return s_componentErrorCounts[AddressEntropyConstants.COMPONENT_ACCESS_CONTROL][AddressEntropyConstants.ERROR_INVALID_ORCHESTRATOR_ADDRESS];
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -205,26 +215,11 @@ abstract contract AbstractAddressFallbackHandler is IAddressFallbackHandler {
         uint256 total = AddressEntropyConstants.ZERO_UINT;
         // Direct access to known error codes instead of loops
         total += s_componentErrorCounts[componentId][AddressEntropyConstants.ERROR_ZERO_ADDRESS];
-        total += s_componentErrorCounts[componentId][AddressEntropyConstants.ERROR_INSUFFICIENT_ADDRESS_DIVERSITY];
         total += s_componentErrorCounts[componentId][AddressEntropyConstants.ERROR_ZERO_SEGMENT];
         total += s_componentErrorCounts[componentId][AddressEntropyConstants.ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS];
         total += s_componentErrorCounts[componentId][AddressEntropyConstants.ERROR_UPDATE_CYCLE_DISRUPTION];
         total += s_componentErrorCounts[componentId][AddressEntropyConstants.ERROR_ENTROPY_ZERO_SEGMENT];
         return total;
-    }
-
-    /// @notice Checks if a component has any errors
-    /// @dev Internal helper for component error detection
-    /// @param componentId The component to check
-    /// @return Whether the component has experienced any errors
-    function _checkComponentHasErrors(uint8 componentId) internal view virtual returns (bool) {
-        // Direct checks instead of loops
-        return s_componentErrorCounts[componentId][AddressEntropyConstants.ERROR_ZERO_ADDRESS] > AddressEntropyConstants.ZERO_UINT ||
-               s_componentErrorCounts[componentId][AddressEntropyConstants.ERROR_INSUFFICIENT_ADDRESS_DIVERSITY] > AddressEntropyConstants.ZERO_UINT ||
-               s_componentErrorCounts[componentId][AddressEntropyConstants.ERROR_ZERO_SEGMENT] > AddressEntropyConstants.ZERO_UINT ||
-               s_componentErrorCounts[componentId][AddressEntropyConstants.ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS] > AddressEntropyConstants.ZERO_UINT ||
-               s_componentErrorCounts[componentId][AddressEntropyConstants.ERROR_UPDATE_CYCLE_DISRUPTION] > AddressEntropyConstants.ZERO_UINT ||
-               s_componentErrorCounts[componentId][AddressEntropyConstants.ERROR_ENTROPY_ZERO_SEGMENT] > AddressEntropyConstants.ZERO_UINT;
     }
 
     /*//////////////////////////////////////////////////////////////

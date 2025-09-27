@@ -97,8 +97,8 @@ contract AddressDataEntropyTestProxy is AddressDataEntropy {
 
     /// @notice Reset all fallback counters for clean testing
     function resetAllFallbackCounters() external {
-        for (uint8 componentId = 1; componentId <= 3; componentId++) {
-            for (uint8 errorCode = 1; errorCode <= 6; errorCode++) {
+        for (uint8 componentId = 1; componentId <= 4; componentId++) {
+            for (uint8 errorCode = 1; errorCode <= 9; errorCode++) {
                 s_componentErrorCounts[componentId][errorCode] = 0;
             }
         }
@@ -149,9 +149,9 @@ contract AddressDataEntropyTestProxy is AddressDataEntropy {
         // Force invalid segment index if enabled
         if (forceInvalidSegmentIndex) {
             _handleFallback(
-                2, // COMPONENT_SEGMENT_EXTRACTION  
+                2, // COMPONENT_SEGMENT_EXTRACTION
                 "extractAddressSegment",
-                4  // ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS
+                3  // ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS
             );
             return bytes5(keccak256(abi.encode(block.timestamp, segmentIndex, addr)));
         }
@@ -163,8 +163,8 @@ contract AddressDataEntropyTestProxy is AddressDataEntropy {
         if (forceZeroSegment) {
             _handleFallback(
                 2, // COMPONENT_SEGMENT_EXTRACTION
-                "extractAddressSegment", 
-                3  // ERROR_ZERO_SEGMENT
+                "extractAddressSegment",
+                2  // ERROR_ZERO_SEGMENT
             );
             return bytes5(keccak256(abi.encode(block.timestamp, segmentIndex, addr)));
         }
@@ -266,8 +266,9 @@ contract AddressDataEntropyTestProxy is AddressDataEntropy {
     }
 
     /// @notice Exposed updateEntropyState for testing state update mechanisms
-    function exposedUpdateEntropyState() external {
-        _updateEntropyState();
+    /// @param actualCaller The caller address to use for state updates
+    function exposedUpdateEntropyState(address actualCaller) external {
+        _updateEntropyState(actualCaller);
     }
 
     /// @notice Exposed tryUpdateAddress for testing address updating logic

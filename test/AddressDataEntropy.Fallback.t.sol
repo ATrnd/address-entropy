@@ -18,7 +18,6 @@ contract AddressDataEntropyFallbackTest is Test {
     // Common addresses
     address public owner;
     address public user;
-    address public user2;
 
     // Seed addresses for the entropy contract
     address[3] public seedAddresses;
@@ -30,10 +29,9 @@ contract AddressDataEntropyFallbackTest is Test {
 
     // Error code constants for verification
     uint8 internal constant ERROR_ZERO_ADDRESS = 1;
-    uint8 internal constant ERROR_INSUFFICIENT_ADDRESS_DIVERSITY = 2;
-    uint8 internal constant ERROR_ZERO_SEGMENT = 3;
-    uint8 internal constant ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS = 4;
-    uint8 internal constant ERROR_UPDATE_CYCLE_DISRUPTION = 5;
+    uint8 internal constant ERROR_ZERO_SEGMENT = 2;
+    uint8 internal constant ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS = 3;
+    uint8 internal constant ERROR_UPDATE_CYCLE_DISRUPTION = 4;
 
     // Function names for error reporting
     string internal constant FUNC_GET_ENTROPY = "getEntropy";
@@ -44,11 +42,9 @@ contract AddressDataEntropyFallbackTest is Test {
         // Setup addresses
         owner = makeAddr("owner");
         user = makeAddr("user");
-        user2 = makeAddr("user2");
 
         // Fund users for tests
         vm.deal(user, 10 ether);
-        vm.deal(user2, 10 ether);
 
         // Setup seed addresses for entropy
         seedAddresses[0] = makeAddr("seed1");
@@ -59,6 +55,10 @@ contract AddressDataEntropyFallbackTest is Test {
         vm.startPrank(owner);
         addressEntropy = new AddressDataEntropy(owner, seedAddresses);
         proxy = new AddressDataEntropyTestProxy(owner, seedAddresses);
+
+        // Configure user as orchestrator for both contracts
+        addressEntropy.setOrchestratorOnce(user);
+        proxy.setOrchestratorOnce(user);
         vm.stopPrank();
     }
 
@@ -82,7 +82,7 @@ contract AddressDataEntropyFallbackTest is Test {
 
         // Execute - call with different user to test msg.sender inclusion
         vm.prank(user);
-        bytes32 entropy = proxy.getEntropy(123);
+        bytes32 entropy = proxy.getEntropy(123, user);
 
         // Verify entropy is non-zero
         assertTrue(entropy != bytes32(0), "Emergency entropy should be non-zero");
@@ -187,7 +187,7 @@ contract AddressDataEntropyFallbackTest is Test {
 
         // Execute
         vm.prank(user);
-        proxy.getEntropy(123);
+        proxy.getEntropy(123, user);
 
         // Get the logs
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -317,7 +317,7 @@ contract AddressDataEntropyFallbackTest is Test {
 
         // Call getEntropy - should trigger fallbacks
         vm.prank(user);
-        bytes32 entropy = proxy.getEntropy(123);
+        bytes32 entropy = proxy.getEntropy(123, user);
 
         // Verify entropy is non-zero despite all the errors
         assertTrue(entropy != bytes32(0), "Entropy should be non-zero despite cascading fallbacks");
@@ -342,18 +342,21 @@ contract AddressDataEntropyFallbackTest is Test {
     /// @notice Test direct component error tracking functions work correctly
     function test_ComponentErrorTracking() public {
         // Initial state - no errors
-        assertFalse(proxy.hasComponentErrors(COMPONENT_ADDRESS_EXTRACTION), "Should have no errors initially");
-        assertFalse(proxy.hasComponentErrors(COMPONENT_SEGMENT_EXTRACTION), "Should have no errors initially");
-        assertFalse(proxy.hasComponentErrors(COMPONENT_ENTROPY_GENERATION), "Should have no errors initially");
+        assertEq(proxy.getAddressExtractionZeroAddressCount(), 0, "Should have no zero address errors initially");
+        assertEq(proxy.getSegmentExtractionZeroSegmentCount(), 0, "Should have no zero segment errors initially");
+        assertEq(proxy.getSegmentExtractionOutOfBoundsCount(), 0, "Should have no out of bounds errors initially");
+        assertEq(proxy.getEntropyGenerationCycleDisruptionCount(), 0, "Should have no cycle disruption errors initially");
+        assertEq(proxy.getEntropyGenerationZeroSegmentCount(), 0, "Should have no entropy zero segment errors initially");
 
         // Force some errors
         proxy.forceIncrementComponentErrorCount(COMPONENT_ADDRESS_EXTRACTION, ERROR_ZERO_ADDRESS);
         proxy.forceIncrementComponentErrorCount(COMPONENT_SEGMENT_EXTRACTION, ERROR_ZERO_SEGMENT);
 
         // Check component has errors
-        assertTrue(proxy.hasComponentErrors(COMPONENT_ADDRESS_EXTRACTION), "Should have errors after increment");
-        assertTrue(proxy.hasComponentErrors(COMPONENT_SEGMENT_EXTRACTION), "Should have errors after increment");
-        assertFalse(proxy.hasComponentErrors(COMPONENT_ENTROPY_GENERATION), "Should still have no errors");
+        assertEq(proxy.getAddressExtractionZeroAddressCount(), 1, "Should have 1 zero address error after increment");
+        assertEq(proxy.getSegmentExtractionZeroSegmentCount(), 1, "Should have 1 zero segment error after increment");
+        assertEq(proxy.getEntropyGenerationCycleDisruptionCount(), 0, "Should still have no cycle disruption errors");
+        assertEq(proxy.getEntropyGenerationZeroSegmentCount(), 0, "Should still have no entropy zero segment errors");
 
         // Check total error counts
         assertEq(proxy.getComponentTotalErrorCount(COMPONENT_ADDRESS_EXTRACTION), 1, "Total should be 1");

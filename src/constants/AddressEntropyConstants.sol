@@ -76,6 +76,7 @@ library AddressEntropyConstants {
     uint8 internal constant COMPONENT_ADDRESS_EXTRACTION = 1;
     uint8 internal constant COMPONENT_SEGMENT_EXTRACTION = 2;
     uint8 internal constant COMPONENT_ENTROPY_GENERATION = 3;
+    uint8 internal constant COMPONENT_ACCESS_CONTROL = 4;
 
     /*//////////////////////////////////////////////////////////////
                             ERROR CODES
@@ -83,11 +84,14 @@ library AddressEntropyConstants {
 
     /// @notice Error codes for safety fallbacks
     uint8 internal constant ERROR_ZERO_ADDRESS = 1;
-    uint8 internal constant ERROR_INSUFFICIENT_ADDRESS_DIVERSITY = 2;
-    uint8 internal constant ERROR_ZERO_SEGMENT = 3;
-    uint8 internal constant ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS = 4;
-    uint8 internal constant ERROR_UPDATE_CYCLE_DISRUPTION = 5;
-    uint8 internal constant ERROR_ENTROPY_ZERO_SEGMENT = 6;
+    uint8 internal constant ERROR_ZERO_SEGMENT = 2;
+    uint8 internal constant ERROR_SEGMENT_INDEX_OUT_OF_BOUNDS = 3;
+    uint8 internal constant ERROR_UPDATE_CYCLE_DISRUPTION = 4;
+    uint8 internal constant ERROR_ENTROPY_ZERO_SEGMENT = 5;
+    uint8 internal constant ERROR_ORCHESTRATOR_NOT_CONFIGURED = 6;
+    uint8 internal constant ERROR_UNAUTHORIZED_ORCHESTRATOR = 7;
+    uint8 internal constant ERROR_ORCHESTRATOR_ALREADY_CONFIGURED = 8;
+    uint8 internal constant ERROR_INVALID_ORCHESTRATOR_ADDRESS = 9;
 
     /*//////////////////////////////////////////////////////////////
                             FUNCTION NAME CONSTANTS
@@ -97,6 +101,8 @@ library AddressEntropyConstants {
     string internal constant FUNC_EXTRACT_ADDRESS_SEGMENT = "extractAddressSegment";
     string internal constant FUNC_GET_ENTROPY = "getEntropy";
     string internal constant FUNC_UPDATE_ENTROPY_STATE = "updateEntropyState";
+    string internal constant FUNC_SET_ORCHESTRATOR_ONCE = "setOrchestratorOnce";
+    string internal constant FUNC_GET_ENTROPY_ACCESS_CONTROLLED = "getEntropy";
 
     /*//////////////////////////////////////////////////////////////
                             COMPONENT NAME CONSTANTS
@@ -106,5 +112,6 @@ library AddressEntropyConstants {
     string internal constant COMPONENT_NAME_ADDRESS_EXTRACTION = "AddressExtraction";
     string internal constant COMPONENT_NAME_SEGMENT_EXTRACTION = "SegmentExtraction";
     string internal constant COMPONENT_NAME_ENTROPY_GENERATION = "EntropyGeneration";
+    string internal constant COMPONENT_NAME_ACCESS_CONTROL = "AccessControl";
     string internal constant COMPONENT_NAME_UNKNOWN = "Unknown";
 }

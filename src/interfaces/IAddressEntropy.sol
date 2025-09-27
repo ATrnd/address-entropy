@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IAddressFallbackHandler} from "./IAddressFallbackHandler.sol";
+
 /**
  * @title IAddressEntropy
  * @notice Interface for address-based entropy generation with segmented extraction
  * @dev Defines entropy generation and fallback monitoring for 160→40bit address segmentation
  * @author ATrnd
  */
-interface IAddressEntropy {
+interface IAddressEntropy is IAddressFallbackHandler {
 
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
@@ -19,16 +21,36 @@ interface IAddressEntropy {
     /// @notice Thrown when segment index is out of bounds
     error AddressEntropy__InvalidSegmentIndex();
 
+    /// @notice Thrown when trying to call getEntropy before orchestrator is configured
+    error AddressEntropy__OrchestratorNotConfigured();
+
+    /// @notice Thrown when unauthorized address attempts to call getEntropy
+    error AddressEntropy__UnauthorizedOrchestrator();
+
+    /// @notice Thrown when trying to configure orchestrator more than once
+    error AddressEntropy__OrchestratorAlreadyConfigured();
+
+    /// @notice Thrown when trying to set zero address as orchestrator
+    error AddressEntropy__InvalidOrchestratorAddress();
+
+    /// @notice Thrown when invalid addresses are provided (consolidated from engine)
+    error AddressEntropy__InvalidAddress();
+
+    /// @notice Thrown when caller is not authorized (consolidated from engine)
+    error AddressEntropy__Unauthorized();
+
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Emitted when a new entropy value is generated
-    /// @param requester Address that requested entropy
+    /// @param requester Address that requested entropy (orchestrator)
+    /// @param actualCaller The actual caller address used for entropy generation
     /// @param segmentIndex The segment index used
     /// @param blockNumber The block number used
     event EntropyGenerated(
         address indexed requester,
+        address indexed actualCaller,
         uint256 segmentIndex,
         uint256 blockNumber
     );
@@ -57,6 +79,15 @@ interface IAddressEntropy {
         string function_name
     );
 
+    /// @notice Emitted when orchestrator is successfully configured
+    /// @param orchestrator Address of the configured orchestrator contract
+    event OrchestratorConfigured(address indexed orchestrator);
+
+    /// @notice Emitted when a general fallback is triggered (consolidated from engine)
+    /// @param reason Human-readable reason for the fallback
+    /// @param fallbackEntropy The generated fallback entropy value
+    event FallbackTriggered(string reason, bytes32 fallbackEntropy);
+
     /*//////////////////////////////////////////////////////////////
                         ENTROPY GENERATION
     //////////////////////////////////////////////////////////////*/
@@ -64,62 +95,26 @@ interface IAddressEntropy {
     /// @notice Generates entropy from current address data with salt
     /// @dev Triple-cycling state management: advances address index, segment index, and update position
     /// @param salt Additional entropy source for randomness enhancement
+    /// @param actualCaller The actual caller address to use for entropy generation (not msg.sender)
     /// @return 32-byte entropy value derived from 40-bit address segment with block and transaction context
-    function getEntropy(uint256 salt) external returns (bytes32);
+    function getEntropy(uint256 salt, address actualCaller) external returns (bytes32);
 
     /*//////////////////////////////////////////////////////////////
-                           STATE QUERIES
+                           ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
 
-    // NOTE: Sensitive state inspection functions have been moved to test-only proxy
-    // for security reasons. These functions enabled entropy prediction attacks:
-    // - getAllEntropyAddresses() -> AddressDataEntropyTestProxy.getAllEntropyAddresses()
-    // - getCurrentIndices() -> AddressDataEntropyTestProxy.getCurrentIndices()
-    // - getTransactionCounter() -> AddressDataEntropyTestProxy.getTransactionCounter()
-    // - extractAllSegments(address addr) -> AddressDataEntropyTestProxy.extractAllSegments()
-    // - getAddressSegments(address addr) -> AddressDataEntropyTestProxy.getAddressSegments()
+    /// @notice Configures the authorized orchestrator address (one-time only)
+    /// @dev Can only be called by contract owner and only once
+    /// @param _orchestrator Address of the EntropyMachine orchestrator contract
+    function setOrchestratorOnce(address _orchestrator) external;
 
-    /*//////////////////////////////////////////////////////////////
-                        FALLBACK MONITORING
-    //////////////////////////////////////////////////////////////*/
+    /// @notice Gets the configured orchestrator address
+    /// @dev Returns zero address if not configured
+    /// @return The orchestrator address
+    function getOrchestrator() external view returns (address);
 
-    /// @notice Gets the count for a specific error in a specific component
-    /// @param componentId The component to check
-    /// @param errorCode The error code to check
-    /// @return The count of this specific error in this component
-    function getComponentErrorCount(uint8 componentId, uint8 errorCode) external view returns (uint256);
-
-    /// @notice Gets the total errors for a specific component
-    /// @param componentId The component to check
-    /// @return Total error count for the component
-    function getComponentTotalErrorCount(uint8 componentId) external view returns (uint256);
-
-    /// @notice Checks if a component has experienced any errors
-    /// @param componentId The component to check
-    /// @return Whether the component has experienced any errors
-    function hasComponentErrors(uint8 componentId) external view returns (bool);
-
-    /// @notice Gets the count of zero address errors in the address extraction component
-    /// @return The error count
-    function getAddressExtractionZeroAddressCount() external view returns (uint256);
-
-    /// @notice Gets the count of zero segment errors in the segment extraction component
-    /// @return The error count
-    function getSegmentExtractionZeroSegmentCount() external view returns (uint256);
-
-    /// @notice Gets the count of out of bounds errors in the segment extraction component
-    /// @return The error count
-    function getSegmentExtractionOutOfBoundsCount() external view returns (uint256);
-
-    /// @notice Gets the count of cycle disruption errors in the entropy generation component
-    /// @return The error count
-    function getEntropyGenerationCycleDisruptionCount() external view returns (uint256);
-
-    /// @notice Gets the count of zero address errors in the entropy generation component
-    /// @return The error count
-    function getEntropyGenerationZeroAddressCount() external view returns (uint256);
-
-    /// @notice Gets the count of zero segment errors in entropy generation
-    /// @return The error count
-    function getEntropyGenerationZeroSegmentCount() external view returns (uint256);
+    /// @notice Checks if orchestrator has been configured
+    /// @dev Returns true if orchestrator is set and valid
+    /// @return True if orchestrator is configured
+    function isOrchestratorConfigured() external view returns (bool);
 }

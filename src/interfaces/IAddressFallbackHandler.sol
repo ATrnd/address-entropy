@@ -24,18 +24,17 @@ interface IAddressFallbackHandler {
     /// @return Total error count for the component
     function getComponentTotalErrorCount(uint8 componentId) external view returns (uint256);
 
-    /// @notice Checks if a component has experienced any errors
-    /// @param componentId The component to check
-    /// @return Whether the component has experienced any errors
-    function hasComponentErrors(uint8 componentId) external view returns (bool);
-
     /*//////////////////////////////////////////////////////////////
-                    COMPONENT-SPECIFIC ERROR QUERIES
+                   ADDRESS EXTRACTION ERROR COUNTS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Gets the count of zero address errors in the address extraction component
     /// @return The error count
     function getAddressExtractionZeroAddressCount() external view returns (uint256);
+
+    /*//////////////////////////////////////////////////////////////
+                   SEGMENT EXTRACTION ERROR COUNTS
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Gets the count of zero segment errors in the segment extraction component
     /// @return The error count
@@ -44,6 +43,10 @@ interface IAddressFallbackHandler {
     /// @notice Gets the count of out of bounds errors in the segment extraction component
     /// @return The error count
     function getSegmentExtractionOutOfBoundsCount() external view returns (uint256);
+
+    /*//////////////////////////////////////////////////////////////
+                   ENTROPY GENERATION ERROR COUNTS
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Gets the count of cycle disruption errors in the entropy generation component
     /// @return The error count
@@ -56,5 +59,25 @@ interface IAddressFallbackHandler {
     /// @notice Gets the count of zero segment errors in entropy generation
     /// @return The error count
     function getEntropyGenerationZeroSegmentCount() external view returns (uint256);
+
+    /*//////////////////////////////////////////////////////////////
+                     ACCESS CONTROL ERROR COUNTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Gets the count of orchestrator not configured errors in the access control component
+    /// @return The error count
+    function getAccessControlOrchestratorNotConfiguredCount() external view returns (uint256);
+
+    /// @notice Gets the count of unauthorized orchestrator errors in the access control component
+    /// @return The error count
+    function getAccessControlUnauthorizedOrchestratorCount() external view returns (uint256);
+
+    /// @notice Gets the count of orchestrator already configured errors in the access control component
+    /// @return The error count
+    function getAccessControlOrchestratorAlreadyConfiguredCount() external view returns (uint256);
+
+    /// @notice Gets the count of invalid orchestrator address errors in the access control component
+    /// @return The error count
+    function getAccessControlInvalidOrchestratorAddressCount() external view returns (uint256);
 
 }
