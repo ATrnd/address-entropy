@@ -24,7 +24,7 @@ jobs:
       - name: ⚙️ Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: v1.1.0
 
       - name: 📋 Show Foundry version
         run: forge --version
@@ -58,7 +58,7 @@ jobs:
       - name: ⚙️ Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: v1.1.0
 
       - name: 📊 Generate coverage report
         run: forge coverage --report lcov
@@ -81,7 +81,7 @@ jobs:
       - name: ⚙️ Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: v1.1.0
 
       - name: 🎨 Check formatting
         run: forge fmt --check
@@ -100,7 +100,7 @@ jobs:
       - name: ⚙️ Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: v1.1.0
 
       - name: 📏 Check contract sizes
         run: |

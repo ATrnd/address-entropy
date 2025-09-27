@@ -19,7 +19,7 @@ jobs:
       - name: ⚙️ Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: v1.1.0
 
       - name: 🎨 Check Solidity formatting
         run: |
@@ -47,7 +47,7 @@ jobs:
       - name: ⚙️ Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: v1.1.0
 
       - name: 📚 Generate documentation
         run: |
@@ -88,7 +88,7 @@ jobs:
       - name: ⚙️ Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: v1.1.0
 
       - name: 🔧 Install dependencies
         run: forge install
