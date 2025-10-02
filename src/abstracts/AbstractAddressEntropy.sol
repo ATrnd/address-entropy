@@ -109,19 +109,11 @@ abstract contract AbstractAddressEntropy is IAddressEntropy, Ownable {
     /// @dev Uses custom errors and constants following established patterns
     modifier onlyOrchestrator() {
         if (s_orchestratorAddress == AddressEntropyConstants.ZERO_ADDRESS) {
-            _handleAccessControlFailure(
-                AddressEntropyConstants.COMPONENT_ACCESS_CONTROL,
-                AddressEntropyConstants.FUNC_GET_ENTROPY_ACCESS_CONTROLLED,
-                AddressEntropyConstants.ERROR_ORCHESTRATOR_NOT_CONFIGURED
-            );
+            // NOTE: Cannot track errors here - revert rolls back state changes
             revert AddressEntropy__OrchestratorNotConfigured();
         }
         if (msg.sender != s_orchestratorAddress) {
-            _handleAccessControlFailure(
-                AddressEntropyConstants.COMPONENT_ACCESS_CONTROL,
-                AddressEntropyConstants.FUNC_GET_ENTROPY_ACCESS_CONTROLLED,
-                AddressEntropyConstants.ERROR_UNAUTHORIZED_ORCHESTRATOR
-            );
+            // NOTE: Cannot track errors here - revert rolls back state changes
             revert AddressEntropy__UnauthorizedOrchestrator();
         }
         _;
@@ -222,20 +214,12 @@ abstract contract AbstractAddressEntropy is IAddressEntropy, Ownable {
     /// @param _orchestrator Address of the EntropyMachine orchestrator contract
     function setOrchestratorOnce(address _orchestrator) external onlyOwner {
         if (s_orchestratorSet) {
-            _handleAccessControlFailure(
-                AddressEntropyConstants.COMPONENT_ACCESS_CONTROL,
-                AddressEntropyConstants.FUNC_SET_ORCHESTRATOR_ONCE,
-                AddressEntropyConstants.ERROR_ORCHESTRATOR_ALREADY_CONFIGURED
-            );
+            // NOTE: Cannot track errors here - revert rolls back state changes
             revert AddressEntropy__OrchestratorAlreadyConfigured();
         }
 
         if (_orchestrator == AddressEntropyConstants.ZERO_ADDRESS) {
-            _handleAccessControlFailure(
-                AddressEntropyConstants.COMPONENT_ACCESS_CONTROL,
-                AddressEntropyConstants.FUNC_SET_ORCHESTRATOR_ONCE,
-                AddressEntropyConstants.ERROR_INVALID_ORCHESTRATOR_ADDRESS
-            );
+            // NOTE: Cannot track errors here - revert rolls back state changes
             revert AddressEntropy__InvalidOrchestratorAddress();
         }
 
